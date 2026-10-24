@@ -153,7 +153,7 @@ export function drawWave(g: CanvasRenderingContext2D, w: number, h: number, t: n
 /** the big pulsar in a star's dossier */
 export function drawPulsarHero(g: CanvasRenderingContext2D, w: number, h: number, si: number, t: number) {
   g.fillStyle = BG; g.fillRect(0, 0, w, h);
-  drawPulsar(g, si, w / 2, h / 2 - 6, w * 0.1, t);
+  drawPulsar(g, si, w / 2, h / 2 - 6, w * 0.1, t, true);
   g.font = `10px ${FONT_LBL}`; g.textAlign = "center"; g.fillStyle = sc(si, 1);
   g.fillText(tempoLabel(galaxy.tempo[si]), w / 2, h - 7);
 }

@@ -1,4 +1,4 @@
-// Stars as pulsars: a granulated sphere lit from within, a corona of contour lines, a flash on every beat at the
+// Stars as pulsars: a granulated sphere lit from within, a dotted halo (a corona of contour lines in the dossier), a flash on every beat at the
 // style's tempo, and a nova shell once per bar.
 import { reduce } from "../core/dom";
 import { galaxy } from "../app/state";
@@ -39,7 +39,8 @@ function corona(c: CanvasRenderingContext2D, si: number, x: number, y: number, s
   }
 }
 
-export function drawPulsar(c: CanvasRenderingContext2D, si: number, x: number, y: number, s: number, t: number) {
+/** hero: the big star in the style's dossier, which wears the topo corona instead of the dotted halo */
+export function drawPulsar(c: CanvasRenderingContext2D, si: number, x: number, y: number, s: number, t: number, hero = false) {
   const { p, bar } = pulseOf(si, t), lum = galaxy.lum[si];
   const prev = c.globalCompositeOperation;
   // nova shell — once per bar
@@ -49,7 +50,14 @@ export function drawPulsar(c: CanvasRenderingContext2D, si: number, x: number, y
   c.globalCompositeOperation = "lighter";
   const gR = s * (1.8 + 1.4 * lum + 2.2 * p); c.globalAlpha = Math.min(1, 0.2 + 0.45 * lum + 0.45 * p); c.drawImage(glowS[si], x - gR, y - gR, gR * 2, gR * 2); c.globalAlpha = 1;
   c.globalCompositeOperation = prev;
-  corona(c, si, x, y, s, t);
+  if (hero) corona(c, si, x, y, s, t);
+  else {
+    // dotted halo, like a planet's satellite ring; breathes with the beat
+    const hr = s * (1.75 + 0.18 * p), rot = (reduce ? 0 : t / 1000) * 0.2 * (si % 2 ? 1 : -1) + galaxy.phase0[si] * 6.283;
+    const nDots = Math.max(16, Math.min(48, Math.round(hr * 1.4))), dsz = Math.max(1, Math.round(s * 0.09));
+    c.fillStyle = sc(si, 0.3 + 0.35 * lum + 0.3 * p);
+    for (let k = 0; k < nDots; k++) { const a = rot + k * 6.283 / nDots; c.fillRect(Math.round(x + Math.cos(a) * hr - dsz / 2), Math.round(y + Math.sin(a) * hr - dsz / 2), dsz, dsz); }
+  }
   // the face: granules, painted at the size step and scaled to the beat
   const r = s * (1 + 0.1 * p), D = Math.min(200, Math.max(6, Math.round(Math.pow(2, Math.round(Math.log2(s * 2) * 4) / 4))));
   const sm = c.imageSmoothingEnabled; c.imageSmoothingEnabled = false;
