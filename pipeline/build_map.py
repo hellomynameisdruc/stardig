@@ -328,14 +328,26 @@ def separate(pos, r, gap=40, rounds=300):
             break
 
 
-def place_planets(planets, star_r, prefs, gap=12, seed=0):
+def place_planets(planets, star_r, prefs, gap=12, seed=0, belts=()):
     """Planets scattered through wide bands around the star (big labels nearer the core).
     Inside a band each planet gets a random distance and a random spot near the angle that faces
     its 'second' style, so there are no visible rings. A whole band turns at one speed, and bands
     are separated by the planets' satellite swarms, so planets never collide.
-    Returns [(x, y, orbit radius, angle, band radius)], outer edge, band radii."""
+    belts: [(share of planets inside it, tracks)] — asteroid belts laid between the bands, like the main
+    belt between Mars and Jupiter: each one opens once that share of the planets is placed.
+    Returns [(x, y, orbit radius, angle, band radius)], outer edge, band radii, belt rings [(r0, width)]."""
     rng = random.Random(seed)
-    out, bands = [], []
+    out, bands, rings = [], [], []
+    todo = list(belts)
+
+    def open_belts(placed, edge, final=False):
+        while todo and (final or placed >= todo[0][0] * len(planets)):
+            _, count = todo.pop(0)
+            r0 = edge + BELT_GAP
+            w = max(12.0, count * 9 / (2 * math.pi * r0))
+            rings.append((r0, w))
+            edge = r0 + w + BELT_GAP
+        return edge
     edge = star_r + 34
     i, n = 0, len(planets)
     while i < n:
@@ -344,7 +356,8 @@ def place_planets(planets, star_r, prefs, gap=12, seed=0):
         mid = edge + width / 2
         here = []  # (x, y, halo) of planets already in this band
         j = i
-        while j < n:
+        stop = math.ceil(todo[0][0] * n) if todo else n  # a band ends where the next belt opens
+        while j < n and (j < stop or j == i):
             h = planets[j]["halo"]
             spot = None
             for k in range(160):
@@ -364,7 +377,9 @@ def place_planets(planets, star_r, prefs, gap=12, seed=0):
         bands.append(round(mid, 1))
         edge += width
         i = j
-    return out, edge, bands
+        edge = open_belts(j, edge)
+    edge = open_belts(n, edge, final=True)
+    return out, edge, bands, rings
 
 
 def hull_at(hull, a):
@@ -388,48 +403,57 @@ def planet_prefs(s, ps, spos, weight):
     return prefs
 
 
-BELTS = 3        # belts round a big system, by era: the oldest innermost
-BELT_GAP = 18    # clear space between two belts
+BELTS = 3        # belts of a big system, by era: the oldest innermost
+BELT_GAP = 18    # clear space round a belt
 
 
-def place_belt(belt_releases, hull):
-    """Belt tracks in up to BELTS rings just outside the system's outline, one per era (oldest inside),
-    with gaps between them, like the main belt and the Kuiper belt. Returns [(release, video, x, y)]
-    relative to the star, the belts' total width, the belt tracks that didn't fit (for the vault) and
-    each belt's [first year, last year, tracks]."""
+def belt_parts(belt_releases):
+    """The belt's tracks (oldest first), split into what's drawn and the vault; the drawn ones in up to
+    BELTS parts by era, with each part's [first year, last year, tracks]."""
     bel = sorted(belt_releases, key=lambda r: r["year"] or 9999)
     bt, vault = split_sample([(r, v) for r in bel for v in r["videos"]], C.MAX_BELT_TRACKS)
-    perim = sum(hull) / len(hull) * 2 * math.pi
     n = max(1, min(BELTS, len(bt) // 300))  # small belts stay one ring
-    out, rings, base = [], [], 10.0
-    for k in range(n):
-        part = bt[len(bt) * k // n: len(bt) * (k + 1) // n]
-        if not part:
-            continue
-        width = max(12, len(part) * 9 / (perim + 2 * math.pi * base))
-        for r, v in part:
-            h = int(v["yt"].encode().hex()[:8], 16)
-            a = (h % 100000) / 100000 * 2 * math.pi
-            rr = hull_at(hull, a) + base + ((h >> 5) % 1000) / 1000 * width
-            out.append((r, v, rr * math.cos(a), rr * math.sin(a)))
+    parts = [p for p in (bt[len(bt) * k // n: len(bt) * (k + 1) // n] for k in range(n)) if p]
+    info = []
+    for part in parts:
         ys = [r["year"] for r, _ in part if r["year"]]
-        rings.append([min(ys, default=0), max(ys, default=0), len(part)])
-        base += width + BELT_GAP
-    return out, max(16.0, base - BELT_GAP - 10), vault, rings
+        info.append([min(ys, default=0), max(ys, default=0), len(part)])
+    return parts, vault, info
+
+
+def scatter(part, radius_at, width):
+    """Belt tracks spread through a ring: radius_at(angle) is its inner edge."""
+    out = []
+    for r, v in part:
+        h = int(v["yt"].encode().hex()[:8], 16)
+        a = (h % 100000) / 100000 * 2 * math.pi
+        rr = radius_at(a) + ((h >> 5) % 1000) / 1000 * width
+        out.append((r, v, rr * math.cos(a), rr * math.sin(a)))
+    return out
 
 
 def layout_system(s, planets, belt_releases, core, spos, weight):
-    """Lays out one star system: planets in bands, the belt outside. Mutates the planets
-    (lx, ly, o, a, b) and returns (planets by halo, belt points, hull, radius, band radii)."""
+    """Lays out one star system: planets in bands with the older belts between them (like the main belt
+    between Mars and Jupiter), the newest belt outside (like the Kuiper belt). Mutates the planets
+    (lx, ly, o, a, b) and returns (planets by halo, belt points, hull, radius, band radii, the belt
+    tracks for the vault, the belts' [first year, last year, tracks])."""
     ps = sorted(planets, key=lambda p: -p["halo"])
-    xy, outer, bands = place_planets(ps, core, planet_prefs(s, ps, spos, weight), seed=seed_of(s))
+    parts, belt_vault, info = belt_parts(belt_releases)
+    inner = [((k + 1) / len(parts), len(part)) for k, part in enumerate(parts[:-1])] if ps else []
+    xy, outer, bands, rings = place_planets(ps, core, planet_prefs(s, ps, spos, weight), seed=seed_of(s), belts=inner)
     hull = [round(max(outer, core + 45) + 12, 1)] * HULL_N
     for p, (x, y, o, a, band) in zip(ps, xy, strict=True):
         p["lx"], p["ly"], p["o"], p["a"], p["b"] = x, y, o, a, band
-    belt_pts, width, belt_vault, rings = place_belt(belt_releases, hull)
-    if belt_pts:
+    belt_pts = []
+    for part, (r0, w) in zip(parts, rings, strict=False):
+        belt_pts += scatter(part, lambda a, r0=r0: r0, w)
+    last = parts[len(rings):]  # the outermost belt (or the only one), just outside the outline
+    if last:
+        perim = sum(hull) / len(hull) * 2 * math.pi
+        width = max(16, len(last[0]) * 9 / perim)
+        belt_pts += scatter(last[0], lambda a: hull_at(hull, a) + 10, width)
         hull = [round(x + 10 + width, 1) for x in hull]
-    return ps, belt_pts, hull, max(hull), bands, belt_vault, rings
+    return ps, belt_pts, hull, max(hull), bands, belt_vault, info
 
 
 def hsl_hex(h, s, l):

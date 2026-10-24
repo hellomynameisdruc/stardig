@@ -139,6 +139,20 @@ export function drawStatic(lc: CanvasRenderingContext2D) {
   // asteroid-belt tracks (planet satellites move, so the live layer draws those)
   beltTitles.length = 0;
   belt.rocks = false;
+  // from the SYSTEMS zoom the belts show as faint dust (a system big on screen loads its tracks for it)
+  if (cam.s >= LOD_PLANETS && cam.s < LOD_TRACKS) {
+    stars.forEach((s, si) => {
+      if (!inView(s.x, s.y, s.R)) return;
+      const ch = baseChunk(si);
+      if (!ch) { if (s.R * cam.s > 220) tracks.load(si); return; }
+      lc.fillStyle = sc(si, 0.55);
+      eachTrack(si, V0.x, V0.y, V1.x, V1.y, (i) => {
+        if (ch.p[i] >= 0 || i & 1) return;
+        const p = cam.toScreen(ch.x[i], ch.y[i]);
+        lc.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+      });
+    });
+  }
   if (cam.s >= LOD_TRACKS) {
     const sz = Math.max(1, Math.min(3, Math.round(cam.s * 0.9)));
     // up close and not too crowded, the live layer draws the belt as tumbling rocks instead of dots

@@ -70,7 +70,7 @@ def test_even_sample_spans_the_whole_list():
 def test_planets_in_a_band_never_overlap():
     rnd = random.Random(1)
     ps = sorted([{"halo": rnd.uniform(8, 30)} for _ in range(60)], key=lambda p: -p["halo"])
-    xy, outer, bands = B.place_planets(ps, 30, [rnd.uniform(0, 6.28) for _ in ps], gap=12, seed=5)
+    xy, outer, bands, _ = B.place_planets(ps, 30, [rnd.uniform(0, 6.28) for _ in ps], gap=12, seed=5)
     assert len(xy) == len(ps) and bands == sorted(bands)
     by_band = {}
     for p, (x, y, o, a, band) in zip(ps, xy, strict=True):
@@ -81,6 +81,19 @@ def test_planets_in_a_band_never_overlap():
             for k in range(i + 1, len(pts)):
                 (x1, y1, h1), (x2, y2, h2) = pts[i], pts[k]
                 assert math.hypot(x1 - x2, y1 - y2) >= h1 + h2 + 12 - 1e-9
+
+
+def test_belts_lie_between_the_planet_bands():
+    """Inner belts open in clear space between bands: no planet (with its satellite swarm) reaches in."""
+    rnd = random.Random(2)
+    ps = sorted([{"halo": rnd.uniform(8, 30)} for _ in range(80)], key=lambda p: -p["halo"])
+    xy, outer, bands, rings = B.place_planets(ps, 30, [rnd.uniform(0, 6.28) for _ in ps], gap=12, seed=5, belts=[(1 / 3, 1000), (2 / 3, 1000)])
+    assert len(rings) == 2 and rings[0][0] < rings[1][0] and rings[1][0] + rings[1][1] <= outer
+    for r0, w in rings:
+        inside = [o for p, (_, _, o, _, _) in zip(ps, xy, strict=True) if o < r0]
+        assert inside and len(inside) < len(ps)  # planets both inside and outside the belt
+        for p, (_, _, o, _, _) in zip(ps, xy, strict=True):
+            assert o + p["halo"] <= r0 or o - p["halo"] >= r0 + w
 
 
 def test_seed_is_stable():
