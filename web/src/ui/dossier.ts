@@ -106,8 +106,8 @@ function planet(pi: number, o: Sel) {
     const c = heroCanvas(); if (!c) return; const f = fitted(c);
     if (((t / 66) | 0) === last) return; last = (t / 66) | 0;
     f.g.fillStyle = BG; f.g.fillRect(0, 0, f.w, f.h);
-    const r = Math.min(f.h * 0.4, g.ringed[pi] ? f.w / 4.3 : f.w * 0.4);
-    drawPlanetBody(f.g, pi, f.w / 2, f.h / 2, r, reduce ? 0.4 : t / 4000 + sd, true); drawn = true;
+    const r = Math.min(f.h * 0.4, g.ringed[pi] ? f.w / 5 : f.w * 0.4);
+    drawPlanetBody(f.g, pi, f.w / 2, f.h / 2, r, reduce ? 0.4 : t / 4000 + sd, 1); drawn = true;
   };
   return {
     code: `PLANET // PL-${pad(pi, 4)}`, title: p.name.toUpperCase(),
