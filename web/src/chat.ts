@@ -19,8 +19,10 @@ import { cloud } from "./cloud/client";
 import { avatarSvg } from "./ui/avatar";
 import { isStaff, rankKey, rankOf, rankTag, RANKS } from "./ui/ranks";
 import { initRail, say } from "./ui/rail";
+import { paintLogos } from "./ui/logo";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
+paintLogos();
 // the phosphor the observatory uses
 document.documentElement.dataset.phosphor = new Prefs(browserKV).phosphor;
 { const cs = getComputedStyle(document.documentElement); applyCursors(`rgb(${cs.getPropertyValue("--ph").trim().split(/\s+/).join(",")})`, cs.getPropertyValue("--bg").trim()); }

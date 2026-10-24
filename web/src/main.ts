@@ -31,6 +31,7 @@ import { initTheme } from "./ui/theme";
 import { initBriefing } from "./ui/briefing";
 import { initPilot } from "./ui/pilot";
 import { initModals } from "./ui/modal";
+import { paintLogos } from "./ui/logo";
 import { initRail } from "./ui/rail";
 import { initComms } from "./ui/comms";
 import { initFleet } from "./ui/fleet";
@@ -38,6 +39,7 @@ import { tuneIn } from "./cloud/fleet";
 import { initShareKey } from "./ui/share";
 import { initSync } from "./cloud/sync";
 
+paintLogos();
 initModals();
 initRail();
 initScene();

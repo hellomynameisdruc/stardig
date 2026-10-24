@@ -33,3 +33,6 @@ input[type="search"], input[type="text"], input[type="email"], textarea { cursor
 .note { font-size: var(--fs-s); color: var(--dim); line-height: 1.6; margin: 0 }
 
 @media (prefers-reduced-motion: reduce) { body::after { animation: none } }
+/* the wordmark on its plate: pixel letters, no font */
+.inv.logo { display: inline-flex; align-items: center; padding: 5px 8px; line-height: 0 }
+.logo-svg { display: block }
