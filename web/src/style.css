@@ -1,4 +1,4 @@
-/* Stardig styles, in cascade order: tokens first, then the glass, controls, the layout, and each
+/* stardig styles, in cascade order: tokens first, then the glass, controls, the layout, and each
    part of the terminal. */
 @import "./styles/tokens.css";
 @import "./styles/base.css";

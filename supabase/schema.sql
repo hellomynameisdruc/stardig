@@ -1,4 +1,4 @@
--- Stardig (formerly Sound Cosmos): pilots (profiles) and comms (chat). Run once in Supabase → SQL Editor.
+-- stardig (formerly Sound Cosmos): pilots (profiles) and comms (chat). Run once in Supabase → SQL Editor.
 
 -- PILOTS: one per account, made on sign-up with a call sign the pilot can change
 create table public.pilots (
