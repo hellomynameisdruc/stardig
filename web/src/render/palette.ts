@@ -30,14 +30,6 @@ export const glowS = galaxy.stars.map((_, si) => sprite(64, 64, (g) => {
   g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
 }));
 export const starDither = galaxy.stars.map((_, si) => sprite(3, 3, (g) => { g.fillStyle = sc(si, 1); g.fillRect(0, 0, 1, 1); g.fillRect(2, 1, 1, 1); g.fillStyle = sc(si, 0.5); g.fillRect(1, 2, 1, 1); }));
-const ditherPats: (CanvasPattern | null)[] = [];
-/** planets' dithered fill */
-export function planetDither(g: CanvasRenderingContext2D, si: number) {
-  if (ditherPats[si]) return ditherPats[si]!;
-  const c = sprite(3, 3, (x) => { x.fillStyle = sc(si, 0.95); x.fillRect(0, 0, 1, 1); x.fillStyle = sc(si, 0.45); x.fillRect(2, 2, 1, 1); });
-  return (ditherPats[si] = g.createPattern(c, "repeat"))!;
-}
-
 export const FONT_LBL = "DotGothic16, 'Martian Mono', monospace";
 
 const rgbOf = (hex: string) => [0, 2, 4].map((k) => parseInt(hex.replace("#", "").slice(k, k + 2), 16));

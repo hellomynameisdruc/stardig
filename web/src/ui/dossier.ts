@@ -6,7 +6,8 @@ import { beacons, chunk, galaxy, isNowPlaying, state, tracks } from "../app/stat
 import { PTYPE_INFO, spanOf } from "../model/galaxy";
 import { tempoLabel } from "../model/tempo";
 import { flyToNebula, nearestTracks, playLightYears, playOrbit, playSystem, select, startPick, toggleBeacon, trackCode } from "../app/actions";
-import { sc } from "../render/palette";
+import { BG, sc } from "../render/palette";
+import { drawPlanetBody } from "../render/planets";
 import { onFrame } from "../render/scene";
 import { drawPulsarHero, drawRadar, drawSphere, drawWave, fitCanvas, fitted } from "./scopes";
 import { ICON, player, scrub } from "./dock";
@@ -104,7 +105,9 @@ function planet(pi: number, o: Sel) {
     if (reduce && drawn) return;
     const c = heroCanvas(); if (!c) return; const f = fitted(c);
     if (((t / 66) | 0) === last) return; last = (t / 66) | 0;
-    drawSphere(f.g, f.w, f.h, sd, t, (a = 1) => sc(p.s, a), ty, g.ringed[pi]); drawn = true;
+    f.g.fillStyle = BG; f.g.fillRect(0, 0, f.w, f.h);
+    const r = Math.min(f.h * 0.4, g.ringed[pi] ? f.w / 4.3 : f.w * 0.4);
+    drawPlanetBody(f.g, pi, f.w / 2, f.h / 2, r, reduce ? 0.4 : t / 4000 + sd, true); drawn = true;
   };
   return {
     code: `PLANET // PL-${pad(pi, 4)}`, title: p.name.toUpperCase(),

@@ -1,60 +1,44 @@
 // Planets: how each type looks, cached sprites, and drawing them at their moving positions.
 import { hash } from "../core/util";
 import { baseChunk, galaxy, motion, state } from "../app/state";
-import { BG, planetDither, sc } from "./palette";
+import { sc } from "./palette";
+import { MAX_CELLS, surface } from "./surface";
 import { cam, LOD_PLANETS } from "./camera";
 import { inView, inLive } from "./view";
 import { labels } from "./labels";
+import { hudFits } from "./markers";
 
-/** a planet's surface marks (craters, spots, storms) as points on the sphere, from its name */
-function surfaceMarks(h: number) {
-  return Array.from({ length: 5 }, (_, k) => ({
-    lon: ((h >>> (k * 3)) % 628) / 100, lat: (((h >>> (k * 5)) % 100) / 100 - 0.5) * 1.6, size: 0.12 + ((h >>> (k * 2)) % 10) / 70,
-  }));
+// Planets drawn every frame (the one you are at, turning; or one too big for a sprite) keep their
+// painted surface and repaint it only when it has turned by about a cell (or the size changed).
+const live = new Map<number, { c: HTMLCanvasElement; D: number; q: number }>();
+function liveSurface(i: number, D: number, spin: number) {
+  const step = Math.max(0.015, 1.5 / D), q = Math.round(spin / step);
+  const id = i * 512 + D; // the map and the dossier may show one planet at two sizes
+  let e = live.get(id);
+  if (e && e.q === q) return e.c;
+  const pl = galaxy.planets[i], src = surface(pl.name, galaxy.ptype[i], pl.s, D, q * step);
+  if (!e) { if (live.size > 8) live.delete(live.keys().next().value!); e = { c: document.createElement("canvas"), D: 0, q: 0 }; live.set(id, e); }
+  if (e.c.width !== D) e.c.width = e.c.height = D;
+  const g = e.c.getContext("2d")!; g.clearRect(0, 0, D, D); g.drawImage(src, 0, 0);
+  e.D = D; e.q = q;
+  return e.c;
 }
+/** forget painted surfaces (after the colours change) */
+export function resetSurfaces() { live.clear(); for (let i = 0; i < pSprite.length; i++) if (pSprite[i]) { pSprite[i] = null; spriteCount--; } }
 
 /**
- * banded giants, ringed long-runners, cratered retired labels, icy newcomers. `spin` (radians)
- * turns the surface marks round the planet's axis; light, shadow and rings stay where they are.
+ * banded giants, ringed long-runners, cratered retired labels, icy newcomers: the surface is a relief
+ * map (render/surface.ts) drawn in crisp screen pixels. `spin` (radians) turns it round the planet's
+ * axis; light, shadow and rings stay where they are.
  */
-export function drawPlanetBody(G: CanvasRenderingContext2D, i: number, x: number, y: number, r: number, spin = 0) {
+export function drawPlanetBody(G: CanvasRenderingContext2D, i: number, x: number, y: number, r: number, spin = 0, live = false) {
   const pl = galaxy.planets[i], si = pl.s, ty = galaxy.ptype[i], h = hash(pl.name), ringed = galaxy.ringed[i];
   const tilt = -0.5 + (h % 100) / 100 * 0.45, rx = r * 1.95, ry = r * 0.5;
   if (ringed) { G.strokeStyle = sc(si, 0.5); G.lineWidth = Math.max(1, r * 0.12); G.beginPath(); G.ellipse(x, y, rx, ry, tilt, Math.PI, Math.PI * 2); G.stroke(); }
-  G.save(); G.beginPath(); G.arc(x, y, r, 0, 7); G.clip();
-  G.fillStyle = BG; G.fillRect(x - r, y - r, r * 2, r * 2);
-  // the dither pattern is pinned to the planet (not the canvas), so it travels with it instead of crawling
-  G.globalAlpha = ty === "young" ? 0.35 : 1; G.fillStyle = planetDither(G, si);
-  G.translate(Math.round(x - r), Math.round(y - r)); G.fillRect(0, 0, r * 2, r * 2); G.translate(-Math.round(x - r), -Math.round(y - r)); G.globalAlpha = 1;
-  if (ty === "giant") {
-    const nb = 5;
-    for (let k = 0; k < nb; k++) {
-      const yy = y - r + (k + 0.5) * (2 * r / nb) + Math.sin(k * 1.7 + h) * r * 0.06;
-      G.fillStyle = sc(si, k % 2 ? 0.9 : 0.3); G.fillRect(x - r, yy - r * 0.1, r * 2, r * (k % 2 ? 0.2 : 0.13));
-    }
-  }
-  // marks on the turning sphere: only the near side shows, squeezed toward the limb
-  const marks = surfaceMarks(h).map((m) => {
-    const lon = m.lon + spin, c = Math.cos(lon), f = Math.max(0, Math.min(1, c / 0.4));
-    return { fade: f * f * (3 - 2 * f), x: x + Math.sin(lon) * Math.cos(m.lat) * r * 0.92, y: y + Math.sin(m.lat) * r * 0.92, rx: m.size * r * Math.max(0, c), ry: m.size * r };
-  }).filter((m) => m.fade > 0.01);
-  if (ty === "ancient") {
-    G.globalAlpha = 0.55; G.fillStyle = BG; G.fillRect(x - r, y - r, r * 2, r * 2); G.globalAlpha = 1;
-    G.strokeStyle = sc(si, 0.85); G.lineWidth = 1;
-    for (const m of marks) { G.globalAlpha = m.fade; G.beginPath(); G.ellipse(m.x, m.y, Math.max(0.5, m.rx), m.ry, 0, 0, 7); G.stroke(); } // craters
-    G.globalAlpha = 1;
-  } else {
-    G.fillStyle = sc(si, 0.95); G.beginPath(); G.arc(x - r * 0.35, y - r * 0.35, r * (ty === "young" ? 0.45 : 0.62), 0, 7); G.fill();
-    G.globalAlpha = 0.55; G.fillStyle = BG; G.beginPath(); G.arc(x + r * 0.05, y + r * 0.05, r * 0.72, 0, 7); G.fill(); G.globalAlpha = 1;
-    // storms and spots drifting with the turn (on gas giants: a couple of big storms)
-    for (const [k, m] of marks.entries()) {
-      if (ty !== "giant" && k > 2) break;
-      G.globalAlpha = (ty === "giant" ? 0.75 : 0.5) * m.fade; G.fillStyle = k % 2 ? BG : sc(si, 0.95);
-      G.beginPath(); G.ellipse(m.x, m.y, Math.max(0.5, m.rx * (ty === "giant" ? 1.3 : 0.8)), m.ry * (ty === "giant" ? 0.55 : 0.8), 0, 0, 7); G.fill();
-    }
-    G.globalAlpha = 1;
-  }
-  G.restore();
+  const D = Math.min(MAX_CELLS, Math.max(4, Math.round(r * 2)));
+  const sm = G.imageSmoothingEnabled; G.imageSmoothingEnabled = false;
+  G.drawImage(live ? liveSurface(i, D, spin) : surface(pl.name, ty, si, D, spin), x - r, y - r, r * 2, r * 2);
+  G.imageSmoothingEnabled = sm;
   G.strokeStyle = sc(si, 0.95); G.lineWidth = 1;
   if (ty === "young") G.setLineDash([2, 2]);
   G.beginPath(); G.arc(x, y, r, 0, 7); G.stroke(); G.setLineDash([]);
@@ -126,13 +110,14 @@ export function drawPlanets(ctx: CanvasRenderingContext2D, t: number) {
     const pl = planets[i], q = motion.planetPos(i, t), p = cam.toScreen(q.x, q.y), r = Math.max(1.5, pl.r * cam.s);
     if (r < 3) { ctx.fillStyle = sc(pl.s, 0.95); ctx.fillRect(Math.round(p.x - 1), Math.round(p.y - 1), 2, 2); continue; }
     // the planet you are at turns (drawn live, a handful at most); the rest stay still as cached sprites
-    if (r > 180 || focus.has(i)) { drawPlanetBody(ctx, i, p.x, p.y, r, focus.has(i) ? spinOf(i, t) : 0); continue; }
+    if (r > 180 || focus.has(i)) { drawPlanetBody(ctx, i, p.x, p.y, r, focus.has(i) ? spinOf(i, t) : 0, true); continue; }
     const sp = planetSprite(i, r), w = sp.c.width / cam.DPR * sp.k;
     ctx.drawImage(sp.c, p.x - w / 2, p.y - w / 2, w, w);
   }
   vis.sort((a, b) => planets[b].n - planets[a].n);
   for (const i of vis) {
     const pl = planets[i], r = pl.r * cam.s; if (r < 4) continue;
+    if (state.sel?.kind === "planet" && state.sel.p === i && hudFits(r)) continue; // its name is on the HUD
     const q = motion.planetPos(i, t), p = cam.toScreen(q.x, q.y);
     labels.label(pl.name.toUpperCase(), p.x, p.y + r + 14, 11, sc(pl.s, 0.85));
   }

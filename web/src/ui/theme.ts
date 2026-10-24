@@ -1,6 +1,7 @@
 // Phosphor colour themes (violet, green, amber).
 import { prefs, state } from "../app/state";
 import { readTheme } from "../render/palette";
+import { resetSurfaces } from "../render/planets";
 import { applyCursors } from "./cursors";
 import { renderDossier } from "./dossier";
 import type { Phosphor } from "../store/prefs";
@@ -9,7 +10,7 @@ export function setPhosphor(name: Phosphor) {
   document.documentElement.dataset.phosphor = name;
   document.querySelectorAll<HTMLButtonElement>(".phos button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.ph === name)));
   prefs.phosphor = name;
-  const t = readTheme(); applyCursors(t.rgb, t.bg);
+  const t = readTheme(); applyCursors(t.rgb, t.bg); resetSurfaces();
   state.dirty = true;
   renderDossier();
 }
