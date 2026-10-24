@@ -1,35 +1,24 @@
-// The wordmark: stardig, lowercase, in DotGothic16's own pixels (copied from the font at its native 16px), except
-// t, i and r, redrawn on the same grid with the font's 2-pixel strokes (at this size the font
-// draws them with 1-pixel stems). A four-point spark comes first. Drawn in the colour it sits in.
-const G: Record<string, string[]> = {
-  s: ["........", "........", "........", "..####..", ".######.", "##....##", "##......", ".#####..", "..#####.", ".#....##", "##....##", ".######.", "..####..", "........"],
-  t: ["......", "..##..", "..##..", "######", "######", "..##..", "..##..", "..##..", "..##..", "..##..", "..##..", "..####", "...###", "......"],
-  a: [".......", ".......", ".......", "..###..", ".#####.", "##...##", ".....##", "..#####", ".######", "##...##", "##...##", ".######", "..##...", "......."],
-  r: [".....", ".....", ".....", ".####", "#####", "##...", "##...", "##...", "##...", "##...", "##...", "##...", ".....", "....."],
-  d: ["........", "......##", "......##", "...##.##", "..######", ".#....##", "##....##", "##....##", "##....##", "##....##", ".##..###", "..######", "...##...", "........"],
-  i: ["..", "##", "##", "..", "##", "##", "##", "##", "##", "##", "##", "##", "..", ".."],
-  g: ["........", "........", "........", "..###.#.", ".######.", "##...##.", "##...##.", ".#####..", ".####...", ".#####..", ".######.", "##....##", ".######.", "..####.."],
-};
+// The wordmark: a four-point pixel spark and "stardig" in Martian Mono — the same face as the
+// credit line. Drawn in the colour it sits in.
 const SPARK = ["............", "............", ".....##.....", ".....##.....", "....####....", "...######...", "############", "############", "...######...", "....####....", ".....##.....", ".....##.....", "............", "............"];
-const GAP = 2;
 
-/** the wordmark as SVG; px = the size of one font pixel in CSS px */
-export function logoSvg(px = 1, spark = true) {
+/** the spark alone, as SVG; px = the size of one of its pixels in CSS px */
+function sparkSvg(px: number) {
   const rects: string[] = [];
-  let x = 0;
-  const put = (rows: string[], dx: number) => rows.forEach((r, y) => {
+  SPARK.forEach((r, y) => {
     for (let i = 0; i < r.length; i++) {
       if (r[i] !== "#") continue;
-      let j = i; while (j + 1 < r.length && r[j + 1] === "#") j++; // runs, not single pixels
-      rects.push(`<rect x="${dx + i}" y="${y}" width="${j - i + 1}" height="1"/>`); i = j;
+      let j = i; while (j + 1 < r.length && r[j + 1] === "#") j++;
+      rects.push(`<rect x="${i}" y="${y}" width="${j - i + 1}" height="1"/>`); i = j;
     }
   });
-  if (spark) { put(SPARK, 0); x = SPARK[0].length + 6; }
-  for (const ch of "stardig") { put(G[ch], x); x += G[ch][0].length + GAP; }
-  const w = x - GAP, h = 14;
-  return `<svg class="logo-svg" viewBox="0 0 ${w} ${h}" width="${w * px}" height="${h * px}" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">${rects.join("")}</svg>`;
+  return `<svg class="logo-spark" viewBox="0 0 12 14" width="${12 * px}" height="${14 * px}" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">${rects.join("")}</svg>`;
+}
+/** the wordmark: the spark, then "stardig" in Martian Mono, the face of the credit line */
+export function logoHtml(px = 1, spark = true) {
+  return `${spark ? sparkSvg(px) : ""}<span class="logo-word" style="font-size:${Math.round(15 * px)}px" aria-hidden="true">stardig</span>`;
 }
 /** fill every .logo on the page */
 export function paintLogos() {
-  document.querySelectorAll<HTMLElement>(".logo").forEach((el) => { el.innerHTML = logoSvg(Number(el.dataset.px) || 1, el.dataset.spark !== "0"); });
+  document.querySelectorAll<HTMLElement>(".logo").forEach((el) => { el.innerHTML = logoHtml(Number(el.dataset.px) || 1, el.dataset.spark !== "0"); });
 }
