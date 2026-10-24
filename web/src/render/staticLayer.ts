@@ -41,6 +41,8 @@ function drawSystemShape(lc: CanvasRenderingContext2D, si: number) {
 
 const SHOW_LINKS = false;
 
+/** the zoom where the belts start to show as dust (planets come in at LOD_PLANETS) */
+const DUST_FROM = 0.2;
 /** belt track titles found at the last background repaint (world coordinates) */
 const beltTitles: { x: number; y: number; t: string; si: number }[] = [];
 
@@ -140,12 +142,14 @@ export function drawStatic(lc: CanvasRenderingContext2D) {
   beltTitles.length = 0;
   belt.rocks = false;
   // from the SYSTEMS zoom the belts show as faint dust (a system big on screen loads its tracks for it)
-  if (cam.s >= LOD_PLANETS && cam.s < LOD_TRACKS) {
+  // (only once well into the systems, and fading in, so zooming out doesn't leave rings of dust behind)
+  const dustA = 0.55 * Math.min(1, Math.max(0, (cam.s - DUST_FROM) / 0.12));
+  if (dustA > 0 && cam.s < LOD_TRACKS) {
     stars.forEach((s, si) => {
       if (!inView(s.x, s.y, s.R)) return;
       const ch = baseChunk(si);
       if (!ch) { if (s.R * cam.s > 220) tracks.load(si); return; }
-      lc.fillStyle = sc(si, 0.55);
+      lc.fillStyle = sc(si, dustA);
       eachTrack(si, V0.x, V0.y, V1.x, V1.y, (i) => {
         if (ch.p[i] >= 0 || i & 1) return;
         const p = cam.toScreen(ch.x[i], ch.y[i]);
