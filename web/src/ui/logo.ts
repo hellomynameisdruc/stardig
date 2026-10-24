@@ -1,4 +1,4 @@
-// The wordmark: a four-point pixel spark and "stardig" in Martian Mono — the same face as the
+// The wordmark: a four-point pixel spark and STARDIG in Martian Mono capitals — the same face as the
 // credit line. Drawn in the colour it sits in.
 const SPARK = ["............", "............", ".....##.....", ".....##.....", "....####....", "...######...", "############", "############", "...######...", "....####....", ".....##.....", ".....##.....", "............", "............"];
 
@@ -14,9 +14,9 @@ function sparkSvg(px: number) {
   });
   return `<svg class="logo-spark" viewBox="0 0 12 14" width="${12 * px}" height="${14 * px}" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">${rects.join("")}</svg>`;
 }
-/** the wordmark: the spark, then "stardig" in Martian Mono, the face of the credit line */
+/** the wordmark: the spark, then STARDIG in Martian Mono capitals, the face of the credit line */
 export function logoHtml(px = 1, spark = true) {
-  return `${spark ? sparkSvg(px) : ""}<span class="logo-word" style="font-size:${Math.round(15 * px)}px" aria-hidden="true">stardig</span>`;
+  return `${spark ? sparkSvg(px) : ""}<span class="logo-word" style="font-size:${Math.round(15 * px)}px" aria-hidden="true">STARDIG</span>`;
 }
 /** fill every .logo on the page */
 export function paintLogos() {
