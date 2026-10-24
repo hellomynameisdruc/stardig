@@ -2,7 +2,8 @@
 // style's tempo, and a nova shell once per bar.
 import { reduce } from "../core/dom";
 import { galaxy } from "../app/state";
-import { BG, glowS, sc, starDither } from "./palette";
+import { glowS, sc } from "./palette";
+import { starFace } from "./starSurface";
 import { cam } from "./camera";
 
 export function pulseOf(si: number, t: number) {
@@ -13,11 +14,15 @@ export function pulseOf(si: number, t: number) {
 /** on-screen star radius: popularity sets it, zoom scales it within limits */
 export const starSize = (si: number) => { const k = galaxy.starRel[si]; return Math.max(3.5 + 8 * k, Math.min(54, (12 + 44 * k) * cam.s)); };
 
-// the dither pattern of each star, created once per canvas
-const patterns = new WeakMap<CanvasRenderingContext2D, CanvasPattern[]>();
-function ditherOf(c: CanvasRenderingContext2D, si: number) {
-  let list = patterns.get(c); if (!list) patterns.set(c, (list = []));
-  return (list[si] ||= c.createPattern(starDither[si], "repeat")!);
+/** the style's burst: long and short rays in turn; longer and brighter the more alive the style is now */
+function burst(c: CanvasRenderingContext2D, si: number, x: number, y: number, s: number, p: number, t: number) {
+  const lum = galaxy.lum[si], n = s < 8 ? 12 : 24, rot = (reduce ? 0 : t / 1000) * 0.03 * (si % 2 ? 1 : -1) + galaxy.phase0[si] * 6.283;
+  const L = s * (0.55 + 1.5 * lum) * (1 + 0.22 * p), r0 = s * 1.18;
+  for (let k = 0; k < n; k++) {
+    const long = k % 2 === 0, big = k % 4 === 0, a = rot + (k * 6.283) / n, len = long ? (big ? L : L * 0.62) : L * 0.32;
+    c.strokeStyle = sc(si, (long ? 0.55 : 0.35) + 0.35 * lum + 0.1 * p); c.lineWidth = Math.max(1, s * (long ? 0.07 : 0.04));
+    c.beginPath(); c.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); c.lineTo(x + Math.cos(a) * (r0 + len), y + Math.sin(a) * (r0 + len)); c.stroke();
+  }
 }
 
 export function drawPulsar(c: CanvasRenderingContext2D, si: number, x: number, y: number, s: number, t: number) {
@@ -26,25 +31,18 @@ export function drawPulsar(c: CanvasRenderingContext2D, si: number, x: number, y
   // nova shell — once per bar
   c.strokeStyle = sc(si, 0.55 * (1 - bar) ** 2); c.lineWidth = Math.max(1, s * 0.1 * (1 - bar));
   c.beginPath(); c.arc(x, y, s * (1.3 + 6 * bar), 0, 7); c.stroke();
-  // dotted halo, like a planet's satellite ring; breathes with the beat
-  const hr = s * (1.75 + 0.18 * p), rot = (reduce ? 0 : t / 1000) * 0.2 * (si % 2 ? 1 : -1) + galaxy.phase0[si] * 6.283;
-  const nDots = Math.max(16, Math.min(48, Math.round(hr * 1.4))), dsz = Math.max(1, Math.round(s * 0.09));
-  c.fillStyle = sc(si, 0.3 + 0.35 * lum + 0.3 * p);
-  for (let k = 0; k < nDots; k++) { const a = rot + k * 6.283 / nDots; c.fillRect(Math.round(x + Math.cos(a) * hr - dsz / 2), Math.round(y + Math.sin(a) * hr - dsz / 2), dsz, dsz); }
   // glow
   c.globalCompositeOperation = "lighter";
   const gR = s * (1.8 + 1.4 * lum + 2.2 * p); c.globalAlpha = Math.min(1, 0.2 + 0.45 * lum + 0.45 * p); c.drawImage(glowS[si], x - gR, y - gR, gR * 2, gR * 2); c.globalAlpha = 1;
   c.globalCompositeOperation = prev;
-  // dithered sphere, lit from inside
-  const r = s * (1 + 0.1 * p);
-  c.save(); c.beginPath(); c.arc(x, y, r, 0, 7); c.clip();
-  c.fillStyle = BG; c.fillRect(x - r, y - r, r * 2, r * 2);
-  c.fillStyle = ditherOf(c, si); c.fillRect(x - r, y - r, r * 2, r * 2);
-  c.globalCompositeOperation = "lighter";
-  const g = c.createRadialGradient(x, y, 0, x, y, r);
-  g.addColorStop(0, `rgba(255,255,255,${0.85 + 0.15 * p})`); g.addColorStop(0.35 + 0.15 * p, sc(si, 0.9)); g.addColorStop(1, sc(si, 0));
-  c.fillStyle = g; c.fillRect(x - r, y - r, r * 2, r * 2);
-  c.restore();
+  burst(c, si, x, y, s, p, t);
+  // the face: granules, painted at the size step and scaled to the beat
+  const r = s * (1 + 0.1 * p), D = Math.min(200, Math.max(6, Math.round(Math.pow(2, Math.round(Math.log2(s * 2) * 4) / 4))));
+  const sm = c.imageSmoothingEnabled; c.imageSmoothingEnabled = false;
+  c.drawImage(starFace(si, galaxy.stars[si].name, D), x - r, y - r, r * 2, r * 2);
+  c.imageSmoothingEnabled = sm;
+  c.globalCompositeOperation = "lighter"; c.globalAlpha = 0.25 + 0.3 * p; c.drawImage(glowS[si], x - r, y - r, r * 2, r * 2); c.globalAlpha = 1;
+  c.globalCompositeOperation = prev;
   // outline, like the planets
   c.strokeStyle = sc(si, 0.95); c.lineWidth = 1; c.beginPath(); c.arc(x, y, r, 0, 7); c.stroke();
 }

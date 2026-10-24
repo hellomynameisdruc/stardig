@@ -46,7 +46,7 @@ export function drawPlanetBody(G: CanvasRenderingContext2D, i: number, x: number
   const sm = G.imageSmoothingEnabled; G.imageSmoothingEnabled = false;
   const src = slot >= 0 ? liveSurface(i, D, spin, slot) : surface(pl.name, ty, si, D, spin);
   // only the part on screen: a small map blown up far past the canvas edges draws wrongly in Chrome
-  const k = G.getTransform().a || 1, vw = G.canvas.width / k, vh = G.canvas.height / k, cell = (2 * r) / D;
+  const big = slot === 0, vw = big ? cam.W : Infinity, vh = big ? cam.H : Infinity, cell = (2 * r) / D; // the map's view, in CSS px
   const c0 = Math.max(0, Math.floor((0 - (x - r)) / cell)), c1 = Math.min(D, Math.ceil((vw - (x - r)) / cell));
   const r0 = Math.max(0, Math.floor((0 - (y - r)) / cell)), r1 = Math.min(D, Math.ceil((vh - (y - r)) / cell));
   if (c1 > c0 && r1 > r0) G.drawImage(src, c0, r0, c1 - c0, r1 - r0, x - r + c0 * cell, y - r + r0 * cell, (c1 - c0) * cell, (r1 - r0) * cell);

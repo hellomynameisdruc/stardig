@@ -29,7 +29,6 @@ export const glowS = galaxy.stars.map((_, si) => sprite(64, 64, (g) => {
   gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.16, sc(si, 1)); gr.addColorStop(0.42, sc(si, 0.32)); gr.addColorStop(1, sc(si, 0));
   g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
 }));
-export const starDither = galaxy.stars.map((_, si) => sprite(3, 3, (g) => { g.fillStyle = sc(si, 1); g.fillRect(0, 0, 1, 1); g.fillRect(2, 1, 1, 1); g.fillStyle = sc(si, 0.5); g.fillRect(1, 2, 1, 1); }));
 export const FONT_LBL = "DotGothic16, 'Martian Mono', monospace";
 
 const rgbOf = (hex: string) => [0, 2, 4].map((k) => parseInt(hex.replace("#", "").slice(k, k + 2), 16));
