@@ -1,4 +1,4 @@
-// The wordmark: a four-point pixel spark and STARDIG in Martian Mono capitals — the same face as the
+// The wordmark: STARDIG in Martian Mono capitals — the same face as the
 // credit line. Drawn in the colour it sits in.
 const SPARK = ["............", "............", ".....##.....", ".....##.....", "....####....", "...######...", "############", "############", "...######...", "....####....", ".....##.....", ".....##.....", "............", "............"];
 
@@ -15,10 +15,10 @@ function sparkSvg(px: number) {
   return `<svg class="logo-spark" viewBox="0 0 12 14" width="${12 * px}" height="${14 * px}" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">${rects.join("")}</svg>`;
 }
 /** the wordmark: the spark, then STARDIG in Martian Mono capitals, the face of the credit line */
-export function logoHtml(px = 1, spark = true) {
+export function logoHtml(px = 1, spark = false) {
   return `${spark ? sparkSvg(px) : ""}<span class="logo-word" style="font-size:${Math.round(15 * px)}px" aria-hidden="true">STARDIG</span>`;
 }
 /** fill every .logo on the page */
 export function paintLogos() {
-  document.querySelectorAll<HTMLElement>(".logo").forEach((el) => { el.innerHTML = logoHtml(Number(el.dataset.px) || 1, el.dataset.spark !== "0"); });
+  document.querySelectorAll<HTMLElement>(".logo").forEach((el) => { el.innerHTML = logoHtml(Number(el.dataset.px) || 1, el.dataset.spark === "1"); });
 }
