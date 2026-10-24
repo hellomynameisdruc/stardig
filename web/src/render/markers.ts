@@ -4,7 +4,7 @@ import { chunk, galaxy, motion } from "../app/state";
 import { BG, FONT_LBL, sc } from "./palette";
 import { cam } from "./camera";
 import { labels } from "./labels";
-import { pulseOf, starSize } from "./pulsar";
+import { starSize } from "./pulsar";
 import { tempoLabel } from "../model/tempo";
 
 /** stars sit still (drawn on the static layer); planets and tracks move (live layer) */
@@ -52,40 +52,8 @@ function planetHud(pi: number, x: number, y: number, r: number) {
   labels.label(pl.name.toUpperCase(), x, top - 18, 12, sc(si, 1), "center", true, true);
 }
 
-/**
- * The star HUD: a tempo dial round the selected star — BPM ticks from 60 to 180 with the style's range
- * lit, a needle that kicks on every beat, and four lamps counting the beats of the bar.
- */
-function starHud(si: number, x: number, y: number, s: number) {
-  const G = labels.g, tempo = galaxy.tempo[si], t = performance.now(), { p, bar } = pulseOf(si, t);
-  const r1 = s * (2.2 + 1.5 * galaxy.lum[si]) + 26, lo = 60, hi = 180, a0 = Math.PI * 0.75, span = Math.PI * 1.5;
-  const ang = (b: number) => a0 + (span * (Math.max(lo, Math.min(hi, b)) - lo)) / (hi - lo);
-  const on = (b: number) => !!tempo && b >= tempo.lo && b <= tempo.hi;
-  // a dark band under the dial, so the system's planets and names don't run through it
-  G.strokeStyle = BG; G.globalAlpha = 0.8; G.lineWidth = 34; G.beginPath(); G.arc(x, y, r1 + 2, a0 - 0.08, a0 + span + 0.08); G.stroke(); G.globalAlpha = 1;
-  G.lineWidth = 1;
-  for (let b = lo; b <= hi; b += 2) {
-    const a = ang(b), big = b % 20 === 0, ra = r1 - (big ? 11 : 5);
-    G.strokeStyle = sc(si, on(b) ? 1 : 0.6); G.lineWidth = on(b) ? 2 : 1;
-    G.beginPath(); G.moveTo(x + Math.cos(a) * ra, y + Math.sin(a) * ra); G.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1); G.stroke();
-    if (big) { G.font = `9px ${FONT_LBL}`; G.textAlign = "center"; G.fillStyle = sc(si, 0.9); G.fillText(String(b), x + Math.cos(a) * (r1 + 14), y + Math.sin(a) * (r1 + 14) + 3); }
-  }
-  if (tempo) {
-    G.strokeStyle = sc(si, 1); G.lineWidth = 3; G.beginPath(); G.arc(x, y, r1 + 4, ang(tempo.lo), ang(tempo.hi)); G.stroke();
-    const a = ang(galaxy.bpm[si]) + p * 0.06; // the kick
-    G.lineWidth = 1.5; G.beginPath(); G.moveTo(x + Math.cos(a) * (r1 - 30), y + Math.sin(a) * (r1 - 30)); G.lineTo(x + Math.cos(a) * (r1 - 13), y + Math.sin(a) * (r1 - 13)); G.stroke();
-    const beat = Math.floor(bar * 4), ly = y + r1 * 0.72 + 4;
-    for (let k = 0; k < 4; k++) { G.fillStyle = sc(si, k === beat ? 1 : 0.25); G.fillRect(Math.round(x - 26 + k * 14), Math.round(ly), 10, 10); }
-  }
-  G.lineWidth = 1;
-  labels.label(tempoLabel(tempo), x, y - r1 - 24, 11, sc(si, 1), "center", true, true);
-}
-
 export function drawMarker(o: Sel, strong: boolean) {
   if (!o) return;
-  if (strong && o.kind === "star" && starSize(o.s) >= 10) {
-    const st = galaxy.stars[o.s], p = cam.toScreen(st.x, st.y); starHud(o.s, p.x, p.y, starSize(o.s)); return;
-  }
   if (strong && o.kind === "planet") {
     const pl = galaxy.planets[o.p], q = motion.planetPos(o.p), p = cam.toScreen(q.x, q.y), r = pl.r * cam.s;
     if (hudFits(r)) { planetHud(o.p, p.x, p.y, r); return; }
