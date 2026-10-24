@@ -13,7 +13,7 @@ import xml.etree.ElementTree as ET
 from datetime import date, timedelta
 
 BUCKET = "https://discogs-data-dumps.s3.us-west-2.amazonaws.com"
-UA = {"User-Agent": "spacejam-map/0.1 (+https://github.com/hellomynameisdruc/spacejam)"}
+UA = {"User-Agent": "spacejam-map/0.1 (+https://github.com/hellomynameisdruc/stardig)"}
 
 
 def _list_keys(prefix: str) -> list[str]:

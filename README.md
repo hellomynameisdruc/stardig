@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://stardig.app/"><img alt="Launch the observatory" src="https://img.shields.io/badge/%E2%96%B6%20LAUNCH-THE%20OBSERVATORY-b8a8ff?style=for-the-badge&labelColor=0b0716"></a>
-  <a href="https://github.com/hellomynameisdruc/spacejam/actions/workflows/deploy.yml"><img alt="Deploy" src="https://img.shields.io/github/actions/workflow/status/hellomynameisdruc/spacejam/deploy.yml?branch=main&style=for-the-badge&label=SIGNAL&labelColor=0b0716&color=78ffaa"></a>
+  <a href="https://github.com/hellomynameisdruc/stardig/actions/workflows/deploy.yml"><img alt="Deploy" src="https://img.shields.io/github/actions/workflow/status/hellomynameisdruc/stardig/deploy.yml?branch=main&style=for-the-badge&label=SIGNAL&labelColor=0b0716&color=78ffaa"></a>
   <img alt="Data: Discogs CC0" src="https://img.shields.io/badge/DATA-DISCOGS%20CC0-ffb85c?style=for-the-badge&labelColor=0b0716">
 </p>
 
