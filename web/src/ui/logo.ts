@@ -1,24 +1,19 @@
-// The wordmark: STARDIG in Martian Mono capitals — the same face as the
-// credit line. Drawn in the colour it sits in.
-const SPARK = ["............", "............", ".....##.....", ".....##.....", "....####....", "...######...", "############", "############", "...######...", "....####....", ".....##.....", ".....##.....", "............", "............"];
-
-/** the spark alone, as SVG; px = the size of one of its pixels in CSS px */
-function sparkSvg(px: number) {
-  const rects: string[] = [];
-  SPARK.forEach((r, y) => {
-    for (let i = 0; i < r.length; i++) {
-      if (r[i] !== "#") continue;
-      let j = i; while (j + 1 < r.length && r[j + 1] === "#") j++;
-      rects.push(`<rect x="${i}" y="${y}" width="${j - i + 1}" height="1"/>`); i = j;
-    }
-  });
-  return `<svg class="logo-spark" viewBox="0 0 12 14" width="${12 * px}" height="${14 * px}" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">${rects.join("")}</svg>`;
+// The wordmark: the burst, then STARDIG in Martian Mono capitals — the same face as the credit line.
+// Drawn in the colour it sits in.
+/** the burst: sixteen rays, long and short in turn, round a bright core (the site's mark and favicon) */
+export function burstSvg(size: number) {
+  let rays = "";
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2, r = i % 2 ? 8.7 : 14, c = Math.cos(a), s = Math.sin(a), f = (v: number) => v.toFixed(2);
+    rays += `<line x1="${f(16 + c * 3.5)}" y1="${f(16 + s * 3.5)}" x2="${f(16 + c * r)}" y2="${f(16 + s * r)}"/>`;
+  }
+  return `<svg class="logo-mark" viewBox="0 0 32 32" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" aria-hidden="true">${rays}<circle cx="16" cy="16" r="2.2" fill="currentColor" stroke="none"/></svg>`;
 }
-/** the wordmark: the spark, then STARDIG in Martian Mono capitals, the face of the credit line */
-export function logoHtml(px = 1, spark = false) {
-  return `${spark ? sparkSvg(px) : ""}<span class="logo-word" style="font-size:${Math.round(15 * px)}px" aria-hidden="true">STARDIG</span>`;
+/** the wordmark: the burst, then STARDIG in Martian Mono capitals, the face of the credit line */
+export function logoHtml(px = 1, mark = true) {
+  return `${mark ? burstSvg(Math.round(17 * px)) : ""}<span class="logo-word" style="font-size:${Math.round(15 * px)}px" aria-hidden="true">STARDIG</span>`;
 }
 /** fill every .logo on the page */
 export function paintLogos() {
-  document.querySelectorAll<HTMLElement>(".logo").forEach((el) => { el.innerHTML = logoHtml(Number(el.dataset.px) || 1, el.dataset.spark === "1"); });
+  document.querySelectorAll<HTMLElement>(".logo").forEach((el) => { el.innerHTML = logoHtml(Number(el.dataset.px) || 1, el.dataset.mark !== "0"); });
 }

@@ -35,4 +35,4 @@ input[type="search"], input[type="text"], input[type="email"], textarea { cursor
 @media (prefers-reduced-motion: reduce) { body::after { animation: none } }
 /* the wordmark on its plate: pixel letters, no font */
 .inv.logo { display: inline-flex; align-items: center; padding: 4px 8px; line-height: 0 }
-.logo { gap: .5em } .logo-spark { display: block; flex: none } .logo-word { font-family: var(--f-mono); font-weight: 400; letter-spacing: .08em; line-height: 1 }
+.logo { gap: .45em } .logo-mark { display: block; flex: none } .logo-word { font-family: var(--f-mono); font-weight: 400; letter-spacing: .08em; line-height: 1 }
