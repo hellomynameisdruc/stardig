@@ -97,7 +97,7 @@ const PANELS: { t: string; p: string; d: string }[] = [
 function build() {
   const el = $("brief");
   el.innerHTML = `<div class="card brief-card" role="document">
-    <div class="card-head"><span class="inv">SOUND COSMOS</span><span>PRE-FLIGHT SAFETY BRIEFING</span><button type="button" class="key icon sm" data-brief-close aria-label="Close the briefing">×</button></div>
+    <div class="card-head"><span class="inv">STARDIG</span><span>PRE-FLIGHT SAFETY BRIEFING</span><button type="button" class="key icon sm" data-brief-close aria-label="Close the briefing">×</button></div>
     <div class="modal-rail" role="status" aria-live="polite" hidden></div>
     <p class="brief-sub">PLEASE READ BEFORE TAKE-OFF · THIS CARD STAYS IN THE SEAT POCKET: <b>?</b></p>
     <ol class="brief-grid">${PANELS.map((p, k) => `<li><span class="brief-n">${k + 1}</span><h3>${p.t}</h3>${p.p}<p>${p.d}</p></li>`).join("")}</ol>

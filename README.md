@@ -1,9 +1,9 @@
 <p align="center">
-  <a href="https://hellomynameisdruc.github.io/spacejam/"><img src="docs/media/banner.png" alt="Sound Cosmos — an observatory for electronic music" width="100%"></a>
+  <a href="https://stardig.app/"><img src="docs/media/banner.png" alt="Stardig — dig for music among the stars" width="100%"></a>
 </p>
 
 <p align="center">
-  <a href="https://hellomynameisdruc.github.io/spacejam/"><img alt="Launch the observatory" src="https://img.shields.io/badge/%E2%96%B6%20LAUNCH-THE%20OBSERVATORY-b8a8ff?style=for-the-badge&labelColor=0b0716"></a>
+  <a href="https://stardig.app/"><img alt="Launch the observatory" src="https://img.shields.io/badge/%E2%96%B6%20LAUNCH-THE%20OBSERVATORY-b8a8ff?style=for-the-badge&labelColor=0b0716"></a>
   <a href="https://github.com/hellomynameisdruc/spacejam/actions/workflows/deploy.yml"><img alt="Deploy" src="https://img.shields.io/github/actions/workflow/status/hellomynameisdruc/spacejam/deploy.yml?branch=main&style=for-the-badge&label=SIGNAL&labelColor=0b0716&color=78ffaa"></a>
   <img alt="Data: Discogs CC0" src="https://img.shields.io/badge/DATA-DISCOGS%20CC0-ffb85c?style=for-the-badge&labelColor=0b0716">
 </p>
@@ -62,7 +62,7 @@ House · Techno · Disco · Trance · Drum n Bass · Ambient · Downtempo · Exp
 - **Beacons**: mark the tracks you love. The **flight log** keeps your listening history. Both stay in your browser.
 - **Share**: the address bar always holds a link to the current track or odyssey.
 
-<img align="right" src="docs/media/mobile.png" alt="Sound Cosmos on a phone" width="220">
+<img align="right" src="docs/media/mobile.png" alt="Stardig on a phone" width="220">
 
 ### Keyboard
 
@@ -85,7 +85,7 @@ The map works with one and two fingers. While music plays, the player becomes a 
 ## Where the data comes from
 
 The catalogue is the monthly **[Discogs data dump](https://data.discogs.com/)**, released under **CC0**, where releases already carry links to their videos.
-Sound Cosmos only embeds the official YouTube player. **Nothing is ever downloaded from YouTube**, and the player is always visible while it plays.
+Stardig only embeds the official YouTube player. **Nothing is ever downloaded from YouTube**, and the player is always visible while it plays.
 
 <details>
 <summary><b>How the map is made</b></summary>

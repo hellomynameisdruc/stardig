@@ -1,4 +1,4 @@
-// Sound Cosmos — entry point. Modules only define things; everything is started here, in order.
+// Stardig — entry point. Modules only define things; everything is started here, in order.
 //   core/    types and helpers          model/  galaxy, motion, routes (pure, tested)
 //   data/    fetching the map           store/  beacons, flight log, prefs (behind a storage adapter)
 //   app/     shared state and actions   render/ camera, layers, what's drawn on the map
@@ -95,6 +95,6 @@ const m = location.hash.match(/^#t(\d+)-(\d+)$/);
 if (m && +m[1] < galaxy.stars.length) tracks.load(+m[1]).then((ch) => { if (+m[2] < ch.yt.length) select({ kind: "track", s: +m[1], i: +m[2] }); });
 
 // signature in the browser console
-console.log("%c SOUND COSMOS %c © 2026 hellomynameisdruc · all rights reserved · github.com/hellomynameisdruc/spacejam",
+console.log("%c STARDIG %c © 2026 hellomynameisdruc · all rights reserved · stardig.app",
   "background:#b8a8ff;color:#0b0716;font-weight:bold;padding:2px 4px", "color:#b8a8ff");
 
