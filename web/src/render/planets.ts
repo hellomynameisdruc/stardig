@@ -20,7 +20,7 @@ function liveSurface(i: number, D: number, spin: number, slot: number) {
   if (e && e.q === q && e.D === D && e.fine === fine) return e.c;
   const pl = galaxy.planets[i], src = surface(pl.name, galaxy.ptype[i], pl.s, D, q * step);
   if (!e) { if (live.size > 8) live.delete(live.keys().next().value!); e = { c: document.createElement("canvas"), D: 0, q: 0, fine: false }; live.set(id, e); }
-  if (e.c.width !== D) e.c.width = e.c.height = D;
+  if (e.c.width !== D || e.c.height !== D) { e.c.width = D; e.c.height = D; } // a new canvas is 300×150: check both
   const g = e.c.getContext("2d")!; g.clearRect(0, 0, D, D); g.drawImage(src, 0, 0);
   e.D = D; e.q = q; e.fine = fine;
   return e.c;
@@ -73,7 +73,7 @@ function planetSprite(i: number, r: number): { c: HTMLCanvasElement; k: number }
     const gn = genome(galaxy.planets[i].name, galaxy.ptype[i]);
     const half = Math.ceil((galaxy.ringed[i] ? rb * (gn.ringRx + gn.ringW) : rb) + 3), w = half * 2;
     const c = e?.c ?? document.createElement("canvas"), px = Math.ceil(w * DPR);
-    if (c.width !== px) { c.width = c.height = px; } else c.getContext("2d")!.clearRect(0, 0, px, px);
+    if (c.width !== px || c.height !== px) { c.width = c.height = px; } else c.getContext("2d")!.clearRect(0, 0, px, px);
     const g = c.getContext("2d")!; g.setTransform(DPR, 0, 0, DPR, 0, 0);
     drawPlanetBody(g, i, half, half, rb);
     if (!e) spriteCount++;
