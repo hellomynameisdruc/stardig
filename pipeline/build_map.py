@@ -13,6 +13,7 @@ The build is a chain of small steps (see build()); each one is a plain function 
 so they can be tested on a handful of fake releases (tests/test_build_map.py).
 """
 import argparse
+import shutil
 import colorsys
 import gzip
 import json
@@ -105,6 +106,15 @@ def even_sample(items, cap):
     return [items[int(k * step)] for k in range(cap)]
 
 
+def split_sample(items, cap):
+    """even_sample, plus what it left out (in order): what goes on the map, and what goes in the vault."""
+    if len(items) <= cap:
+        return items, []
+    step = len(items) / cap
+    keep = {int(k * step) for k in range(cap)}
+    return [items[k] for k in sorted(keep)], [x for k, x in enumerate(items) if k not in keep]
+
+
 def group_labels(rel, stars, min_label):
     """Labels with enough releases become planets of their most common home style; the rest of the
     releases (small labels, no label) go to that style's asteroid belt."""
@@ -122,10 +132,10 @@ def group_labels(rel, stars, min_label):
         star = Counter(r["home"] for r in rs).most_common(1)[0][0]
         side = Counter(s for r in rs for s in r["styles"] if s in star_set and s != star)
         tracks = sorted(((r, v) for r in rs for v in r["videos"]), key=lambda rv: (rv[0]["year"] or 9999))
-        tracks = even_sample(tracks, C.MAX_TRACKS_PER_PLANET)
+        tracks, vault = split_sample(tracks, C.MAX_TRACKS_PER_PLANET)
         r_pl = min(26, 3 + 1.25 * math.sqrt(len(rs)))
         planets.append({
-            "name": name, "star": star, "n": len(rs), "side": side, "tracks": tracks,
+            "name": name, "star": star, "n": len(rs), "side": side, "tracks": tracks, "vault": vault,
             "r": r_pl, "halo": r_pl + 4 + 1.5 * math.sqrt(len(tracks)),
             "years": [min((r["year"] for r in rs if r["year"]), default=0), max(r["year"] for r in rs)],
             "active_years": len({r["year"] for r in rs if r["year"]}),
@@ -378,20 +388,34 @@ def planet_prefs(s, ps, spos, weight):
     return prefs
 
 
+BELTS = 3        # belts round a big system, by era: the oldest innermost
+BELT_GAP = 18    # clear space between two belts
+
+
 def place_belt(belt_releases, hull):
-    """Belt tracks scattered in a ring just outside the system's outline.
-    Returns [(release, video, x, y)] relative to the star, and the belt's width."""
+    """Belt tracks in up to BELTS rings just outside the system's outline, one per era (oldest inside),
+    with gaps between them, like the main belt and the Kuiper belt. Returns [(release, video, x, y)]
+    relative to the star, the belts' total width, the belt tracks that didn't fit (for the vault) and
+    each belt's [first year, last year, tracks]."""
     bel = sorted(belt_releases, key=lambda r: r["year"] or 9999)
-    bt = even_sample([(r, v) for r in bel for v in r["videos"]], C.MAX_BELT_TRACKS)
+    bt, vault = split_sample([(r, v) for r in bel for v in r["videos"]], C.MAX_BELT_TRACKS)
     perim = sum(hull) / len(hull) * 2 * math.pi
-    width = max(16, len(bt) * 9 / perim)
-    out = []
-    for r, v in bt:
-        h = int(v["yt"].encode().hex()[:8], 16)
-        a = (h % 100000) / 100000 * 2 * math.pi
-        rr = hull_at(hull, a) + 10 + ((h >> 5) % 1000) / 1000 * width
-        out.append((r, v, rr * math.cos(a), rr * math.sin(a)))
-    return out, width
+    n = max(1, min(BELTS, len(bt) // 300))  # small belts stay one ring
+    out, rings, base = [], [], 10.0
+    for k in range(n):
+        part = bt[len(bt) * k // n: len(bt) * (k + 1) // n]
+        if not part:
+            continue
+        width = max(12, len(part) * 9 / (perim + 2 * math.pi * base))
+        for r, v in part:
+            h = int(v["yt"].encode().hex()[:8], 16)
+            a = (h % 100000) / 100000 * 2 * math.pi
+            rr = hull_at(hull, a) + base + ((h >> 5) % 1000) / 1000 * width
+            out.append((r, v, rr * math.cos(a), rr * math.sin(a)))
+        ys = [r["year"] for r, _ in part if r["year"]]
+        rings.append([min(ys, default=0), max(ys, default=0), len(part)])
+        base += width + BELT_GAP
+    return out, max(16.0, base - BELT_GAP - 10), vault, rings
 
 
 def layout_system(s, planets, belt_releases, core, spos, weight):
@@ -402,10 +426,10 @@ def layout_system(s, planets, belt_releases, core, spos, weight):
     hull = [round(max(outer, core + 45) + 12, 1)] * HULL_N
     for p, (x, y, o, a, band) in zip(ps, xy, strict=True):
         p["lx"], p["ly"], p["o"], p["a"], p["b"] = x, y, o, a, band
-    belt_pts, width = place_belt(belt_releases, hull)
+    belt_pts, width, belt_vault, rings = place_belt(belt_releases, hull)
     if belt_pts:
         hull = [round(x + 10 + width, 1) for x in hull]
-    return ps, belt_pts, hull, max(hull), bands
+    return ps, belt_pts, hull, max(hull), bands, belt_vault, rings
 
 
 def hsl_hex(h, s, l):
@@ -418,7 +442,7 @@ def assemble(stars, pos, systems, style_n, star_core, year_hist, weight, hues):
     """Builds map.json content, per-star track chunks and the artist search index.
     Tracks of a planet sit on a spiral around it (oldest nearest); then the belt."""
     sidx = {s: i for i, s in enumerate(stars)}
-    stars_out, planets_out, chunks, search_artists = [], [], [], {}
+    stars_out, planets_out, chunks, vaults, search_artists = [], [], [], [], {}
     for si, s in enumerate(stars):
         sys = systems[s]
         sx, sy = pos[si]
@@ -447,11 +471,58 @@ def assemble(stars, pos, systems, style_n, star_core, year_hist, weight, hues):
             add(r, v, sx + x, sy + y, -1)
         ch["an"] = artists
         chunks.append(ch)
+        # the vault: the star's tracks that aren't drawn — each planet's rest, then the belt's
+        va = {"yt": [], "t": [], "a": [], "yr": [], "an": [], "artists": []}
+        v_idx = {}
+
+        def stash(r, v):
+            if r["artist"] not in v_idx:
+                v_idx[r["artist"]] = len(va["an"])
+                va["an"].append(r["artist"])
+            if r["artist"].lower() not in search_artists:
+                va["artists"].append((r["artist"], si, len(va["yt"])))
+            va["yt"].append(v["yt"]); va["t"].append(v["title"]); va["a"].append(v_idx[r["artist"]]); va["yr"].append(r["year"])
+
+        first_pi = len(planets_out) - len(sys["planets"])
+        for k, p in enumerate(sys["planets"]):
+            v0 = len(va["yt"])
+            for r, v in p["vault"]:
+                stash(r, v)
+            if len(va["yt"]) > v0:
+                planets_out[first_pi + k]["v"] = [v0, len(va["yt"]) - v0]
+        b0 = len(va["yt"])
+        for r, v in sys["belt_vault"]:
+            stash(r, v)
+        vaults.append(va)
         stars_out.append({"name": s, "x": round(float(sx), 1), "y": round(float(sy), 1), "core": round(star_core[s], 1),
                           "R": round(sys["radius"], 1), "n": style_n[s], "tracks": len(ch["yt"]), "color": hsl_hex(hue, 0.9, 0.66),
                           "yh": year_hist[s], "hull": sys["hull"], "orb": sys["bands"]})
+        if len(va["yt"]) > b0:
+            stars_out[-1]["bv"] = [b0, len(va["yt"]) - b0]
+        if len(sys["rings"]) > 1:
+            stars_out[-1]["belts"] = sys["rings"]
     links = [[sidx[a], sidx[b], round(w, 4)] for (a, b), w in weight.items() if a < b and w >= LINK_MIN]
-    return stars_out, planets_out, links, chunks, sorted(search_artists.values())
+    # artists found only in the vault: searched by the start of their name, one file per first letter
+    vault_artists, seen = {}, set(search_artists)
+    for va in vaults:
+        for name, si, k in va.pop("artists"):
+            low = name.lower()
+            if low in seen:
+                continue
+            seen.add(low)
+            vault_artists.setdefault(vault_letter(name), []).append([name, si, k])
+    return stars_out, planets_out, links, chunks, sorted(search_artists.values()), vaults, vault_artists
+
+
+VAULT_SHARD = 4000
+
+
+def vault_letter(name):
+    """the file a vault artist is filed under: the first letter or digit of the name, else '_'"""
+    for c in name.lower():
+        if c.isalnum():
+            return c if ("a" <= c <= "z" or "0" <= c <= "9") else "_"
+    return "_"
 
 
 def pack_chunk(ch):
@@ -468,12 +539,14 @@ def pack_chunk(ch):
     return base, text
 
 
-def write_outputs(out_dir, map_json, chunks, artists):
+def write_outputs(out_dir, map_json, chunks, artists, vaults=(), vault_artists=None):
     out_dir.mkdir(parents=True, exist_ok=True)
     for sub in ("tracks", "titles"):
         (out_dir / sub).mkdir(exist_ok=True)
         for f in (out_dir / sub).glob("*.json"):
             f.unlink()
+    if (out_dir / "vault").exists():
+        shutil.rmtree(out_dir / "vault")
     dump = lambda obj, path: json.dump(obj, open(path, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     dump(map_json, out_dir / "map.json")
     for i, ch in enumerate(chunks):
@@ -481,6 +554,25 @@ def write_outputs(out_dir, map_json, chunks, artists):
         dump(base, out_dir / "tracks" / f"{i}.json")
         dump(text, out_dir / "titles" / f"{i}.json")
     dump(artists, out_dir / "artists.json")
+    # the vault: each star's off-map tracks in shards of VAULT_SHARD, plus all their ids in one file
+    # (to find a saved track again); vault-only artists by first letter
+    flat = lambda xs: "\n".join(str(x).replace("\n", " ") for x in xs)
+    for i, va in enumerate(vaults):
+        if not va["yt"]:
+            continue
+        d = out_dir / "vault" / str(i)
+        d.mkdir(parents=True)
+        dump({"yt": "".join(va["yt"])}, d / "ids.json")
+        for k in range(0, len(va["yt"]), VAULT_SHARD):
+            sl = slice(k, k + VAULT_SHARD)
+            used = sorted(set(va["a"][sl]))
+            remap = {a: j for j, a in enumerate(used)}
+            dump({"yt": "".join(va["yt"][sl]), "yr": va["yr"][sl], "t": flat(va["t"][sl]),
+                  "an": flat(va["an"][a] for a in used), "a": [remap[a] for a in va["a"][sl]]}, d / f"{k // VAULT_SHARD}.json")
+    if vault_artists:
+        (out_dir / "vault" / "artists").mkdir(parents=True, exist_ok=True)
+        for c, rows in vault_artists.items():
+            dump(sorted(rows), out_dir / "vault" / "artists" / f"{c}.json")
 
 
 # ---------- the whole build ----------
@@ -527,8 +619,8 @@ def build(rel, min_style, min_label, sample=False, sectors=None):
 
     systems = {}
     for s in stars:
-        ps, belt_pts, hull, radius, bands = layout_system(s, sys_by_star[s], belt[s], star_core[s], spos, weight)
-        systems[s] = {"planets": ps, "belt": belt_pts, "hull": hull, "radius": radius, "bands": bands}
+        ps, belt_pts, hull, radius, bands, belt_vault, rings = layout_system(s, sys_by_star[s], belt[s], star_core[s], spos, weight)
+        systems[s] = {"planets": ps, "belt": belt_pts, "hull": hull, "radius": radius, "bands": bands, "belt_vault": belt_vault, "rings": rings}
 
     # final star layout with the real system sizes
     pos, centres = layout_galaxies(stars, np.array([systems[s]["radius"] for s in stars]), weight, gal, gids, iters=400)
@@ -536,7 +628,7 @@ def build(rel, min_style, min_label, sample=False, sectors=None):
     ghue = None
     if isinstance(hues, tuple):
         hues, ghue = hues
-    stars_out, planets_out, links, chunks, artists = assemble(stars, pos, systems, style_n, star_core, year_hist, weight, hues)
+    stars_out, planets_out, links, chunks, artists, vaults, vault_artists = assemble(stars, pos, systems, style_n, star_core, year_hist, weight, hues)
 
     names = {sec["id"]: sec["name"] for sec in sectors}
     gindex = {g: k for k, g in enumerate(gids)}
@@ -554,19 +646,20 @@ def build(rel, min_style, min_label, sample=False, sectors=None):
     build_id = "%08x" % zlib.crc32(json.dumps([[s["name"], s["tracks"]] for s in stars_out]).encode("utf-8"))
     # rev: changes with anything on the map (positions too); the site puts it on the data URLs it fetches
     rev = "%08x" % zlib.crc32(json.dumps([stars_out, planets_out, galaxies], separators=(",", ":")).encode("utf-8"))
-    meta = {"sector": name, "sample": sample, "build": build_id, "rev": rev, "releases": len(rel), "tracks": sum(len(c["yt"]) for c in chunks), "years": [y0, y1]}
-    return {"meta": meta, "galaxies": galaxies, "stars": stars_out, "links": links, "planets": planets_out}, chunks, artists
+    meta = {"sector": name, "sample": sample, "build": build_id, "rev": rev, "releases": len(rel), "tracks": sum(len(c["yt"]) for c in chunks),
+            "vault": sum(len(v["yt"]) for v in vaults), "shard": VAULT_SHARD, "years": [y0, y1]}
+    return {"meta": meta, "galaxies": galaxies, "stars": stars_out, "links": links, "planets": planets_out}, chunks, artists, vaults, vault_artists
 
 
 def main(src, out_dir, min_style, min_label, sample, only):
     sectors = [s for s in load_sectors() if not only or s["id"] in only]
     rel = full_catalogue(src, sectors)
     print(f"Catalogue: {len(rel):,} releases in {len(sectors)} sectors")
-    map_json, chunks, artists = build(rel, min_style, min_label, sample, sectors)
-    write_outputs(out_dir, map_json, chunks, artists)
+    map_json, chunks, artists, vaults, vault_artists = build(rel, min_style, min_label, sample, sectors)
+    write_outputs(out_dir, map_json, chunks, artists, vaults, vault_artists)
     gal = ", ".join(f"{g['name']} {g['stars']}" for g in map_json["galaxies"])
     print(f"Map ready: {len(map_json['stars'])} stars (≥ {min_style} releases) in galaxies [{gal}], "
-          f"{len(map_json['planets']):,} planets, {map_json['meta']['tracks']:,} tracks → {out_dir}")
+          f"{len(map_json['planets']):,} planets, {map_json['meta']['tracks']:,} tracks on the map + {map_json['meta']['vault']:,} in the vault → {out_dir}")
 
 
 if __name__ == "__main__":

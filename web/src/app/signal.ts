@@ -1,6 +1,7 @@
 // A track's own address, that survives the map being rebuilt: its YouTube id and its style's name,
 // "#sig-<id>.<style>". Shared in COMMS it becomes a card; opened in a browser it flies to the track.
-import { chunk, galaxy, tracks } from "./state";
+import { chunk, galaxy } from "./state";
+import { locateYt } from "./vault";
 
 const SIG = /#sig-([A-Za-z0-9_-]{11})\.([^\s#?&]+)/;
 export type Signal = { yt: string; star: string };
@@ -28,7 +29,7 @@ export function find(sig: Signal) {
   if (!p) {
     p = (async () => {
       const s = galaxy.starIndex(sig.star); if (s < 0) return null;
-      const ch = await tracks.load(s).catch(() => null), i = ch ? ch.yt.indexOf(sig.yt) : -1;
+      const i = await locateYt(s, sig.yt).catch(() => -1); // the vault too
       return i >= 0 ? { s, i } : null;
     })().then((r) => { found.set(key, r); pending.delete(key); return r; });
     pending.set(key, p);

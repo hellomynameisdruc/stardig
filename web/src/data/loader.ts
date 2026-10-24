@@ -7,6 +7,8 @@ export const loadMap = (): Promise<MapData> => fetch("./data/map.json", { cache:
 let build = "";
 // "-2": the packed two-file format, so browsers don't reuse track files cached in the old one
 export const setDataVersion = (v: string | undefined) => { build = v ? `?v=${encodeURIComponent(v)}-2` : ""; };
+/** a data file's address, with the build on it */
+export const dataUrl = (path: string) => `./data/${path}${build}`;
 export const loadArtists = (): Promise<[string, number, number][]> => fetch(`./data/artists.json${build}`).then((r) => r.json());
 
 /** a star's tracks as stored: ids glued together, years, and the asteroid belt's coordinates */

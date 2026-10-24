@@ -3,6 +3,10 @@
 export type Star = {
   name: string; x: number; y: number; core: number; R: number; n: number; tracks: number; color: string;
   yh?: number[]; hull?: number[]; bub?: [number, number, number][]; orb?: number[];
+  /** the belt's tracks in the vault (off the map): [first, count] in the star's vault */
+  bv?: [number, number];
+  /** a big system's asteroid belts, innermost first: [first year, last year, tracks drawn] */
+  belts?: [number, number, number][];
   /** index of the galaxy (sector) the star belongs to */
   g?: number;
 };
@@ -11,11 +15,15 @@ export type Nebula = { id: string; name: string; x: number; y: number; r: number
 export type Planet = {
   name: string; s: number; x: number; y: number; r: number; n: number; yr: [number, number];
   ay?: number; o?: number; a?: number; b?: number; xs?: [number, number][]; t0: number; t1: number;
+  /** the planet's tracks in the vault (off the map): [first, count] in its star's vault */
+  v?: [number, number];
 };
-export type MapMeta = { sector: string; sample: boolean; build?: string; rev?: string; releases: number; tracks: number; years?: [number, number] };
+/** vault: tracks kept off the map (still playable); shard: tracks per vault file */
+export type MapMeta = { sector: string; sample: boolean; build?: string; rev?: string; releases: number; tracks: number; vault?: number; shard?: number; years?: [number, number] };
 export type MapData = { meta: MapMeta; galaxies?: Nebula[]; stars: Star[]; links: [number, number, number][]; planets: Planet[] };
 /** Tracks of one star system (tracks/<star>.json) */
-export type Chunk = { yt: string[]; t: string[]; a: number[]; yr: number[]; p: number[]; x: number[]; y: number[]; an: string[] };
+/** n0: where tracks brought in from the vault start (they are appended while they're needed) */
+export type Chunk = { yt: string[]; t: string[]; a: number[]; yr: number[]; p: number[]; x: number[]; y: number[]; an: string[]; n0?: number };
 
 export type TrackRef = { s: number; i: number };
 export type Sel = { kind: "star"; s: number } | { kind: "planet"; p: number } | { kind: "track"; s: number; i: number } | null;

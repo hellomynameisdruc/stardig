@@ -2,13 +2,23 @@
 import { esc } from "../core/util";
 import { $ } from "../core/dom";
 import { galaxy, tracks } from "../app/state";
-import { loadArtists } from "../data/loader";
+import { dataUrl, loadArtists } from "../data/loader";
+import { adopt } from "../app/vault";
 import { flyToNebula, select } from "../app/actions";
 
 type Hit = { label: string; kind: string; color?: string; go: () => void };
 let q: HTMLInputElement, res: HTMLElement;
 let artists: [string, number, number][] | null = null;
 let hits: Hit[] = [], cur = 0;
+// artists who are only in the vault (off the map), one file per first letter, fetched as typed
+const vaultArtists = new Map<string, [string, number, number][] | null>();
+const letterOf = (name: string) => { for (const c of name.toLowerCase()) if (/[\p{L}\p{N}]/u.test(c)) return /[a-z0-9]/.test(c) ? c : "_"; return "_"; };
+function vaultShelf(c: string, then: () => void) {
+  if (vaultArtists.has(c) || !galaxy.meta.vault) return vaultArtists.get(c) ?? null;
+  vaultArtists.set(c, null);
+  fetch(dataUrl(`vault/artists/${c}.json`)).then((r) => (r.ok ? r.json() : [])).then((rows) => { vaultArtists.set(c, rows); then(); }).catch(() => {});
+  return null;
+}
 
 function choose(i: number) { hits[i]?.go(); res.hidden = true; q.value = ""; q.blur(); }
 export const searchInput = () => q;
@@ -28,6 +38,11 @@ export function initSearch() {
     if (artists) for (let i = 0; i < artists.length && hits.length < 24; i++) {
       const [name, st, ti] = artists[i];
       if (name.toLowerCase().includes(s)) hits.push({ label: name, kind: "ARTIST", go: () => tracks.load(st).then(() => select({ kind: "track", s: st, i: ti })) });
+    }
+    const shelf = vaultShelf(letterOf(s), () => q.dispatchEvent(new Event("input")));
+    if (shelf) for (let i = 0; i < shelf.length && hits.length < 30; i++) {
+      const [name, st, k] = shelf[i];
+      if (name.toLowerCase().includes(s)) hits.push({ label: name, kind: "ARTIST · VAULT", go: () => adopt(st, k).then((ti) => select({ kind: "track", s: st, i: ti })) });
     }
     cur = 0; res.hidden = false;
     res.innerHTML = hits.length ? hits.map((h, i) => `<button data-h="${i}" class="${i === 0 ? "on" : ""}"><span class="k">${h.kind}</span>${h.color ? `<i class="sw" style="background:${h.color}"></i>` : ""}<span>${esc(h.label)}</span></button>`).join("") : `<p class="note" style="padding:8px 10px">NOTHING FOUND.</p>`;

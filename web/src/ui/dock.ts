@@ -64,9 +64,11 @@ export function paintOdysseyTag() {
       $("dockOdyN").textContent = `${pad(k + 1, 2)}/${pad(r!.flat.length, 2)}`;
     }
   } else if (orbiting) {
+    // heard of all the label's tracks: the drawn ones and those brought in from the vault
     let heard = 0; for (let i = p!.t0; i < p!.t1; i++) if (state.played.has(ch!.yt[i])) heard++;
+    for (let i = ch!.n0 ?? ch!.yt.length; i < ch!.yt.length; i++) if (ch!.p[i] === state.orbit && state.played.has(ch!.yt[i])) heard++;
     $("dockOdy").firstChild!.textContent = "SOLARIS STATION ";
-    $("dockOdyN").textContent = `${pad(heard, 2)}/${pad(p!.t1 - p!.t0, 2)}`;
+    $("dockOdyN").textContent = `${pad(heard, 2)}/${pad(p!.t1 - p!.t0 + (p!.v?.[1] ?? 0), 2)}`;
   }
   $("dockOdy").title = orbiting ? `Orbiting ${p!.name}: next plays another track of this label` : "";
 }

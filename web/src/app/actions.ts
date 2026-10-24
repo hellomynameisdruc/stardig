@@ -8,6 +8,7 @@ import { HITCHHIKE_TRACKS, pickStopTracks, planLightYears, planRoute, planSystem
 import { cam, LOD_PLANETS, LOD_TITLES, LOD_TRACKS, MAX_SCALE } from "../render/camera";
 import { ui } from "./ports";
 import { signalHash } from "./signal";
+import { adopt } from "./vault";
 import { wormhole } from "../ui/wormhole";
 
 export const trackCode = (s: number, i: number) => `TR-${pad(s, 2)}.${pad(i, 5)}`;
@@ -71,25 +72,29 @@ export function playTrack(ref: TrackRef) {
   ui.stats(); state.dirty = true;
 }
 
-/** how many asteroid-belt tracks (no label) a star has */
-export const beltSize = (si: number) => galaxy.stars[si].tracks - galaxy.planetsByStar[si].reduce((a, p) => a + galaxy.planets[p].t1 - galaxy.planets[p].t0, 0);
+/** how many asteroid-belt tracks (no label) a star has: the drawn rocks and the ones in the vault */
+export const beltDrawn = (si: number) => galaxy.stars[si].tracks - galaxy.planetsByStar[si].reduce((a, p) => a + galaxy.planets[p].t1 - galaxy.planets[p].t0, 0);
+export const beltSize = (si: number) => beltDrawn(si) + (galaxy.stars[si].bv?.[1] ?? 0);
 
 /**
  * DIG: drill into a random asteroid of the star's belt and play it — the deepest crates, tracks with
- * no label at all. Rocks not yet mined come first.
+ * no label at all — out of the whole belt, the vault included. Among the drawn rocks, ones not yet
+ * mined come first.
  */
 export function digBelt(si: number) {
   if (galaxy.meta.sample) return;
   const ch = chunk(si); if (!ch) { tracks.load(si).then(() => digBelt(si)); return; }
-  const all: number[] = [];
-  for (let i = 0; i < ch.p.length; i++) if (ch.p[i] < 0 && !dead.has(ch.yt[i])) all.push(i);
-  if (!all.length) return;
+  const all: number[] = [], n0 = ch.n0 ?? ch.yt.length;
+  for (let i = 0; i < n0; i++) if (ch.p[i] < 0 && !dead.has(ch.yt[i])) all.push(i);
   const fresh = all.filter((i) => !ore.has(ch.yt[i]) && !state.played.has(ch.yt[i]));
-  const pool = fresh.length ? fresh : all, i = pool[Math.floor(Math.random() * pool.length)];
+  const pool = fresh.length ? fresh : all, bv = galaxy.stars[si].bv, inVault = bv?.[1] ?? 0;
+  if (!pool.length && !inVault) return;
   if (state.routeIdx >= 0) { state.routeIdx = -1; ui.showRoute(); }
   state.orbit = null;
-  state.dig = { s: si, i, t0: performance.now() };
-  select({ kind: "track", s: si, i }, true, true);
+  const go = (i: number) => { state.dig = { s: si, i, t0: performance.now() }; select({ kind: "track", s: si, i }, true, true); };
+  const k = Math.floor(Math.random() * (pool.length + inVault));
+  if (k < pool.length) go(pool[k]);
+  else adopt(si, bv![0] + (k - pool.length)).then(go).catch(() => {});
 }
 
 /** the k nearest tracks of the same system, optionally skipping YouTube ids */
@@ -126,19 +131,25 @@ export function prev() {
   const h = state.history;
   if (h.length > 1) { h.pop(); const r = h.pop()!; select({ kind: "track", ...r }, true, true); }
 }
-/** a random satellite of the planet, preferring ones not heard yet this session */
+/**
+ * A random satellite of the planet, preferring ones not heard yet this session — out of all the label's
+ * tracks, the drawn ones and the ones in the vault alike.
+ */
 export function playOrbit(pi: number) {
   const p = galaxy.planets[pi], ch = chunk(p.s); if (p.t1 <= p.t0) return;
   if (!ch) { tracks.load(p.s).then(() => playOrbit(pi)); return; }
   const np = state.nowPlaying;
   const all = Array.from({ length: p.t1 - p.t0 }, (_, k) => p.t0 + k).filter((i) => !dead.has(ch.yt[i]));
-  if (!all.length) { state.orbit = null; return; } // every signal here has gone dark
   const fresh = all.filter((i) => !state.played.has(ch.yt[i]) && !(np && np.s === p.s && np.i === i));
-  const pool = fresh.length ? fresh : all, i = pool[Math.floor(Math.random() * pool.length)];
+  const inVault = p.v?.[1] ?? 0;
+  if (!all.length && !inVault) { state.orbit = null; return; } // every signal here has gone dark
   if (state.routeIdx >= 0) { state.routeIdx = -1; ui.showRoute(); }
   if (state.orbit !== pi) state.orbitSince = Date.now(); // a new station starts its clock
   state.orbit = pi;
-  select({ kind: "track", s: p.s, i }, true, true);
+  // drawn and vault tracks in proportion; the drawn pool is the fresh ones while there are any
+  const pool = fresh.length ? fresh : all, k = Math.floor(Math.random() * (pool.length + inVault));
+  if (k < pool.length) { select({ kind: "track", s: p.s, i: pool[k] }, true, true); return; }
+  adopt(p.s, p.v![0] + (k - pool.length)).then((i) => { if (state.orbit === pi) select({ kind: "track", s: p.s, i }, true, true); }).catch(() => {});
 }
 /**
  * A station takes up orbit round the planet that is already playing, without changing the track: what

@@ -84,6 +84,10 @@ export class Motion {
   /** world position of track i of star s at time t; z > 0 means in front of its planet. Shared object. */
   trackPos(s: number, i: number, t = this.now) {
     const ch = this.chunk(s)!, o = this.orbitOf(s), OP = this.OP;
+    if (ch.n0 !== undefined && i >= ch.n0 && ch.p[i] >= 0) { // a guest from the vault: rides along with its planet
+      const pi = ch.p[i], B = this.g.planets[pi], P = this.planetPos(pi, t);
+      OP.x = P.x + ch.x[i] - B.x; OP.y = P.y + ch.y[i] - B.y; OP.z = 1; return OP;
+    }
     if (o && ch.p[i] >= 0) this.ensurePlanet(ch.p[i]);
     if (!o || ch.p[i] < 0 || !o.d[i]) { OP.x = ch.x[i]; OP.y = ch.y[i]; OP.z = 1; return OP; }
     const P = this.planetPos(ch.p[i], t), th = o.th[i] + this.secs(t) * o.w[i], d = o.d[i];

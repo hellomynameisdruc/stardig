@@ -89,8 +89,8 @@ def test_seed_is_stable():
 
 
 def test_build_is_consistent_and_deterministic():
-    map1, chunks1, artists1 = B.build(catalogue(), min_style=20, min_label=3)
-    map2, chunks2, _ = B.build(catalogue(), min_style=20, min_label=3)
+    map1, chunks1, artists1, _, _ = B.build(catalogue(), min_style=20, min_label=3)
+    map2, chunks2, _, _, _ = B.build(catalogue(), min_style=20, min_label=3)
     assert json.dumps(map1) == json.dumps(map2) and json.dumps(chunks1) == json.dumps(chunks2)
 
     stars, planets = map1["stars"], map1["planets"]
@@ -121,10 +121,10 @@ def test_build_is_consistent_and_deterministic():
 
 
 def test_write_outputs(tmp_path):
-    m, chunks, artists = B.build(catalogue(), min_style=20, min_label=3)
+    m, chunks, artists, vaults, vartists = B.build(catalogue(), min_style=20, min_label=3)
     (tmp_path / "tracks").mkdir()
     (tmp_path / "tracks" / "99.json").write_text("{}")  # stale file from an older build
-    B.write_outputs(tmp_path, m, chunks, artists)
+    B.write_outputs(tmp_path, m, chunks, artists, vaults, vartists)
     assert json.loads((tmp_path / "map.json").read_text())["meta"] == m["meta"]
     for sub in ("tracks", "titles"):
         assert sorted(p.name for p in (tmp_path / sub).iterdir()) == sorted(f"{i}.json" for i in range(len(chunks)))
@@ -139,9 +139,45 @@ def test_write_outputs(tmp_path):
         assert text["t"].split("\n") == ch["t"] and text["an"].split("\n") == ch["an"] and text["a"] == ch["a"]
 
 
+def test_vault_keeps_every_track_off_the_map(tmp_path, monkeypatch):
+    """Tracks past the caps aren't lost: they go to the vault, planet by planet and then the belt."""
+    monkeypatch.setattr(B.C, "MAX_TRACKS_PER_PLANET", 2)
+    monkeypatch.setattr(B.C, "MAX_BELT_TRACKS", 3)
+    monkeypatch.setattr(B, "VAULT_SHARD", 4)
+    rel = catalogue()
+    m, chunks, artists, vaults, vartists = B.build(rel, min_style=20, min_label=3)
+    on_map = {y for ch in chunks for y in ch["yt"]}
+    in_vault = [y for va in vaults for y in va["yt"]]
+    assert not on_map & set(in_vault) and len(in_vault) == len(set(in_vault))
+    assert m["meta"]["vault"] == len(in_vault) > 0
+    for p in m["planets"]:
+        if "v" in p:
+            v0, n = p["v"]
+            assert p["t1"] - p["t0"] == 2 and n > 0
+    for si, s in enumerate(m["stars"]):
+        va = vaults[si]
+        ranges = sorted([p["v"] for p in m["planets"] if p["s"] == si and "v" in p] + ([s["bv"]] if "bv" in s else []))
+        assert sum(n for _, n in ranges) == len(va["yt"])  # planets' ranges and the belt's cover the vault
+    B.write_outputs(tmp_path, m, chunks, artists, vaults, vartists)
+    for si, va in enumerate(vaults):
+        if not va["yt"]:
+            continue
+        d = tmp_path / "vault" / str(si)
+        assert json.loads((d / "ids.json").read_text())["yt"] == "".join(va["yt"])
+        for k in range(0, len(va["yt"]), 4):
+            sh = json.loads((d / f"{k // 4}.json").read_text())
+            names = sh["an"].split("\n")
+            for j, y in enumerate(va["yt"][k:k + 4]):
+                assert sh["yt"][j * 11:j * 11 + 11] == y and names[sh["a"][j]] == va["an"][va["a"][k + j]]
+    for c, rows in vartists.items():
+        assert c == B.vault_letter(rows[0][0])
+        for name, si, k in rows:
+            assert vaults[si]["an"][vaults[si]["a"][k]] == name
+
+
 def test_planet_satellites_follow_from_track_numbers():
     """The site puts a planet's satellites back from their numbers alone (see web/src/data/loader.ts)."""
-    m, chunks, _ = B.build(catalogue(), min_style=20, min_label=3)
+    m, chunks, _, _, _ = B.build(catalogue(), min_style=20, min_label=3)
     for p in m["planets"]:
         ch = chunks[p["s"]]
         for k, i in enumerate(range(p["t0"], p["t1"])):
@@ -197,7 +233,7 @@ def test_sectors_become_galaxies(monkeypatch):
         r = rel_(st, f"L{k % 7}", 1995 + k % 20, ids)
         r["secs"] = [s["id"] for s in sectors if set(st) & set(s["styles"])]
         out.append(r)
-    m, _, _ = B.build(out, 50, 3, sample=True, sectors=sectors)
+    m, _, _, _, _ = B.build(out, 50, 3, sample=True, sectors=sectors)
     names = {g["id"]: k for k, g in enumerate(m["galaxies"])}
     assert set(names) == {"house", "techno"} and m["meta"]["sector"] == "Electronic"
     by = {s["name"]: s["g"] for s in m["stars"]}

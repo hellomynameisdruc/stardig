@@ -3,6 +3,7 @@ import { esc, pad } from "../core/util";
 import { $ } from "../core/dom";
 import { beacons, chunk, flightLog, galaxy, tracks } from "../app/state";
 import { select } from "../app/actions";
+import { locateYt } from "../app/vault";
 import { openComms } from "./comms";
 
 /** a saved entry's place on the current map: by YouTube id within its star (found by name), or by its
@@ -12,8 +13,7 @@ async function locate(e: { s: number; i: number; b?: string; y?: string; st?: st
   if (e.y) {
     const byName = galaxy.starIndex(e.st), s = byName >= 0 ? byName : e.s;
     if (s >= stars.length) return null;
-    const ch = await tracks.load(s).catch(() => null); if (!ch) return null;
-    const i = ch.yt[e.i] === e.y ? e.i : ch.yt.indexOf(e.y);
+    const i = await locateYt(s, e.y, e.i).catch(() => -1); // the vault too
     return i >= 0 ? { s, i } : null;
   }
   if (e.b !== meta.build || e.s >= stars.length) return null; // numbers from another build of the map
@@ -38,12 +38,13 @@ export async function renderBeacons() {
   if (!beacons.size) { el.innerHTML = `<p class="note">NO BEACONS YET. SET ONE ON A TRACK YOU LOVE: THE BEACON KEY OR <kbd>L</kbd>.</p>`; return; }
   // each beacon's star: by name if it has one (survives rebuilds), else the saved number
   const starOf = beacons.all.map((b) => { const n = galaxy.starIndex(b.st); return n >= 0 ? n : b.s; });
-  await Promise.allSettled([...new Set(starOf)].filter((s) => s < stars.length).map((s) => tracks.load(s)));
+  // where each beacon is now: by YouTube id in its star's tracks, or brought in from the vault
+  const at = await Promise.all(beacons.all.map((b, k) => (starOf[k] < stars.length ? locateYt(starOf[k], b.y, starOf[k] === b.s ? b.i : -1).catch(() => -1) : Promise.resolve(-1))));
   const parts = beacons.playlistLinks();
   const links = parts.map((href, k) => `<a class="ytlist" href="${href}" target="_blank" rel="noopener">▶ OPEN AS YOUTUBE PLAYLIST${parts.length > 1 ? ` · PART ${k + 1}/${parts.length}` : ""} ↗</a>`).join("");
   el.innerHTML = links + `<p class="note ythint">Opens on YouTube; use “Save” there to keep it in your library.</p>` +
     beacons.all.map((b, k) => {
-      const r = starOf[k] < stars.length ? beacons.ref(b, starOf[k]) : null;
+      const r = at[k] >= 0 ? { s: starOf[k], i: at[k] } : null;
       return `<div class="lk"><button ${r ? `data-s="${r.s}" data-i="${r.i}"` : "disabled"}><time>${pad(k + 1, 2)}</time><span title="${esc(`${b.a ?? ""} — ${b.t ?? ""}`)}">▸ ${esc(b.a ?? "")} — ${esc(b.t ?? "")}${r ? ` · ${esc(stars[r.s].name.toUpperCase())}` : ""}</span></button><button class="unlike" data-y="${esc(b.y)}" aria-label="Remove beacon">×</button></div>`;
     }).join("");
 }
