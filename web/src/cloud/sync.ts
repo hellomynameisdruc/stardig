@@ -1,9 +1,9 @@
 // The logbook: a signed-in pilot's beacons and flight log, kept with the account so every device has
 // them. On sign-in this browser's and the account's are merged; after that every change is sent up.
 // A removed beacon leaves a tombstone ("gone": id → when), so another device's copy can't bring it back
-// unless it was set again later. Flights are counted for good, apart from the short log: each device
+// unless it was set again later. Ore (belt tracks dug up) is a plain union. Flights are counted for good, apart from the short log: each device
 // keeps its own tally and the account holds them all, so the total adds up across devices.
-import { beacons, flightLog } from "../app/state";
+import { beacons, flightLog, ore } from "../app/state";
 import type { Beacon } from "../store/beacons";
 import type { LogEntry } from "../store/flightLog";
 import { browserKV, readJSON } from "../store/storage";
@@ -54,7 +54,8 @@ function merge(remote: { beacons?: unknown; gone?: unknown; flights?: unknown })
   const m = mergeLogbook(beacons.all, flightLog.all, gone, remote, counts);
   gone = m.gone; trimGone(); counts = m.count; saveCounts();
   applying = true;
-  try { beacons.replaceAll(m.beacons); flightLog.replaceAll(m.flights); }
+  const rf = remote.flights as { ore?: unknown } | null;
+  try { beacons.replaceAll(m.beacons); flightLog.replaceAll(m.flights); if (rf && !Array.isArray(rf)) ore.merge(rf.ore); }
   finally { applying = false; }
   known = new Set(beacons.all.map((b) => b.y));
 }
@@ -62,7 +63,7 @@ function merge(remote: { beacons?: unknown; gone?: unknown; flights?: unknown })
 async function push() {
   if (!uid || !ready) return;
   const sb = await cloud();
-  await sb.from("logbooks").upsert({ pilot: uid, beacons: beacons.all, gone, flights: { list: flightLog.all, count: counts }, updated_at: new Date().toISOString() });
+  await sb.from("logbooks").upsert({ pilot: uid, beacons: beacons.all, gone, flights: { list: flightLog.all, count: counts, ore: ore.all }, updated_at: new Date().toISOString() });
 }
 const later = () => { clearTimeout(timer); timer = window.setTimeout(push, 1500); };
 
@@ -81,6 +82,7 @@ export function initSync() {
     known = now;
     if (!applying) later();
   });
+  ore.changed.on(() => { if (!applying) later(); });
   flightLog.changed.on(() => { if (applying) return; counts[dev] = (counts[dev] ?? 0) + 1; saveCounts(); later(); });
   onPilot(() => {
     const id = pilot.me?.id ?? null; if (id === uid) return;

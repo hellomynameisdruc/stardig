@@ -2,7 +2,7 @@
 // these; these change the state and the camera and ask the UI to refresh.
 import type { Sel, TrackRef } from "../core/types";
 import { pad } from "../core/util";
-import { beacons, chunk, dead, flightLog, galaxy, motion, state, tracks } from "./state";
+import { beacons, chunk, dead, flightLog, galaxy, motion, ore, state, tracks } from "./state";
 import { orbitR } from "../model/galaxy";
 import { HITCHHIKE_TRACKS, pickStopTracks, planLightYears, planRoute, planSystemTour, starEnd } from "../model/routes";
 import { cam, LOD_PLANETS, LOD_TITLES, LOD_TRACKS, MAX_SCALE } from "../render/camera";
@@ -66,7 +66,30 @@ export function playTrack(ref: TrackRef) {
   const h = state.history, last = h[h.length - 1];
   if (!last || last.i !== ref.i || last.s !== ref.s) h.push(ref);
   ui.loadTrack(ref);
-  flightLog.add(ref, Date.now(), { b: galaxy.meta.build, y: ch.yt[ref.i], st: galaxy.stars[ref.s].name }); ui.stats(); state.dirty = true;
+  flightLog.add(ref, Date.now(), { b: galaxy.meta.build, y: ch.yt[ref.i], st: galaxy.stars[ref.s].name });
+  if (ch.p[ref.i] < 0 && ore.add(ch.yt[ref.i])) ui.oreFound(ore.size); // a belt track heard: ore
+  ui.stats(); state.dirty = true;
+}
+
+/** how many asteroid-belt tracks (no label) a star has */
+export const beltSize = (si: number) => galaxy.stars[si].tracks - galaxy.planetsByStar[si].reduce((a, p) => a + galaxy.planets[p].t1 - galaxy.planets[p].t0, 0);
+
+/**
+ * DIG: drill into a random asteroid of the star's belt and play it — the deepest crates, tracks with
+ * no label at all. Rocks not yet mined come first.
+ */
+export function digBelt(si: number) {
+  if (galaxy.meta.sample) return;
+  const ch = chunk(si); if (!ch) { tracks.load(si).then(() => digBelt(si)); return; }
+  const all: number[] = [];
+  for (let i = 0; i < ch.p.length; i++) if (ch.p[i] < 0 && !dead.has(ch.yt[i])) all.push(i);
+  if (!all.length) return;
+  const fresh = all.filter((i) => !ore.has(ch.yt[i]) && !state.played.has(ch.yt[i]));
+  const pool = fresh.length ? fresh : all, i = pool[Math.floor(Math.random() * pool.length)];
+  if (state.routeIdx >= 0) { state.routeIdx = -1; ui.showRoute(); }
+  state.orbit = null;
+  state.dig = { s: si, i, t0: performance.now() };
+  select({ kind: "track", s: si, i }, true, true);
 }
 
 /** the k nearest tracks of the same system, optionally skipping YouTube ids */

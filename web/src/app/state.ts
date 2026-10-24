@@ -11,6 +11,7 @@ import { Beacons } from "../store/beacons";
 import { FlightLog } from "../store/flightLog";
 import { Prefs } from "../store/prefs";
 import { DeadSignals } from "../store/deadSignals";
+import { Ore } from "../store/ore";
 
 const map = await loadMap();
 setDataVersion(map.meta.rev ?? map.meta.build);
@@ -25,6 +26,7 @@ export const beacons = new Beacons(browserKV, chunk);
 export const flightLog = new FlightLog(browserKV);
 export const prefs = new Prefs(browserKV);
 export const dead = new DeadSignals(browserKV);
+export const ore = new Ore(browserKV);
 
 export const state = {
   sel: null as Sel,
@@ -55,6 +57,8 @@ export const state = {
   following: false,
   /** the other ships of the fleet, drawn round the track on air */
   fleetShips: [] as { nick: string; color: string }[],
+  /** a dig under way: the asteroid being drilled and when it started (performance.now()) */
+  dig: null as { s: number; i: number; t0: number } | null,
 };
 
 export const sameSel = (a: Sel, b: Sel) => !!a && !!b && JSON.stringify(a) === JSON.stringify(b);

@@ -2,7 +2,7 @@
 import type { Vec } from "../core/types";
 import { $, uiZoom } from "../core/dom";
 import { galaxy, sameSel, state } from "../app/state";
-import { endPick, goHome, next, pickBlocked, select, toggleBeacon, warp, zoomBy } from "../app/actions";
+import { digBelt, endPick, goHome, next, pickBlocked, select, toggleBeacon, warp, zoomBy } from "../app/actions";
 import { cam } from "../render/camera";
 import { sc } from "../render/palette";
 import { pick } from "../render/picker";
@@ -60,6 +60,7 @@ export function initInput() {
     else if (k === "w" || k === "ц") warp();
     else if (k === "h" || k === "р") goHome();
     else if (k === "n" || k === "т") next();
+    else if (k === "d" || k === "в") { const si = sel ? (sel.kind === "planet" ? galaxy.planets[sel.p].s : sel.s) : state.nowPlaying?.s; if (si !== undefined) digBelt(si); }
     else if (k === "l" || k === "д") toggleBeacon(sel?.kind === "track" ? sel : state.nowPlaying);
     else if (k === " ") { e.preventDefault(); player.toggle(); }
     else if (k === "+" || k === "=") zoomBy(1.5);

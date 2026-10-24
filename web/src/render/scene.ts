@@ -12,6 +12,7 @@ import { drawSatellites } from "./satellites";
 import { drawStation } from "./station";
 import { drawRoute } from "./routeLine";
 import { drawMarker } from "./markers";
+import { drawBelt, drawDig } from "./asteroids";
 import { drawNames, drawStatic, farView, painted, readout } from "./staticLayer";
 
 let vp: HTMLElement, cv: HTMLCanvasElement, ctx: CanvasRenderingContext2D;
@@ -84,8 +85,10 @@ function drawLive(t: number) {
   drawNames();
   drawRoute(ctx, t);
   tickSprites(); if (++frameNo % 6 === 0) readout();
+  drawBelt(ctx, t);
   drawPlanets(ctx, t);
   drawSatellites(ctx, t);
+  drawDig(ctx, t);
   galaxy.stars.forEach((s, si) => {
     if (!inView(s.x, s.y, starSize(si) * 9 / cam.s)) return;
     const p = cam.toScreen(s.x, s.y);

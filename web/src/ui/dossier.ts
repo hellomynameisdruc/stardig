@@ -2,10 +2,10 @@
 import type { PType, Sel } from "../core/types";
 import { esc, fmt, hash, pad } from "../core/util";
 import { $, reduce } from "../core/dom";
-import { beacons, chunk, galaxy, isNowPlaying, state, tracks } from "../app/state";
+import { beacons, chunk, galaxy, isNowPlaying, ore, state, tracks } from "../app/state";
 import { PTYPE_INFO, spanOf } from "../model/galaxy";
 import { tempoLabel } from "../model/tempo";
-import { flyToNebula, nearestTracks, playLightYears, playOrbit, playSystem, select, startPick, toggleBeacon, trackCode } from "../app/actions";
+import { beltSize, digBelt, flyToNebula, nearestTracks, playLightYears, playOrbit, playSystem, select, startPick, toggleBeacon, trackCode } from "../app/actions";
 import { BG, sc } from "../render/palette";
 import { drawPlanetBody } from "../render/planets";
 import { onFrame } from "../render/scene";
@@ -14,6 +14,7 @@ import { ICON, player, scrub } from "./dock";
 import { decodeDossier, scramble } from "./glitch";
 import { shareTrack } from "./share";
 import { provide } from "../app/ports";
+import { say } from "./rail";
 
 let dosAnim: ((t: number) => void) | null = null;
 /** objects behind data-r buttons of the current render */
@@ -75,6 +76,7 @@ function star(si: number) {
       <p class="note">Size shows how many releases the style has; glow shows how alive it is today. The star pulses at the tempo typical for its style (styles without a steady beat just breathe slowly) and sheds a shell once every bar. Tempo is the usual range for the style, not measured from the tracks.</p>
       ${s.yh?.length ? hist(s.yh, g.Y0, "ACTIVITY // RELEASES PER YEAR") : ""}
       ${!g.meta.sample && pl.length ? `<button class="play" data-system="${si}">▶ HITCHHIKE THE SYSTEM</button>` : ""}
+      ${!g.meta.sample && beltSize(si) > 0 ? `<button class="plot crt dig" data-dig="${si}" title="Drill into a random asteroid: a track with no label at all — self-released, white labels, the unknown. Every new one you hear is ore."><span>⛏ DIG THE BELT · ${fmt(beltSize(si))} ROCKS</span></button>` : ""}
       ${pl.length ? `<button class="plot crt" data-route-star="${si}"><span>⟶ START THE ODYSSEY FROM HERE</span></button>` : ""}
       ${nb.length ? `<div class="bars"><div class="ph-sub">GRAVITATIONAL LINKS</div>${nb.map((n) => meter(g.stars[n.s].name.toUpperCase(), Math.min(1, n.w * 3), `${Math.round(n.w * 100)}%`, R({ kind: "star", s: n.s }), g.stars[n.s].color)).join("")}</div>` : ""}
       <div><div class="ph-sub">PLANETS IN ORBIT</div><div class="list">${pl.slice(0, 40).map((p, k) => `<button data-r="${R({ kind: "planet", p })}"><span class="n">${pad(k + 1, 3)}</span><span class="t">${esc(g.planets[p].name)}</span><span class="y">${fmt(g.planets[p].n)} REL</span></button>`).join("")}</div>
@@ -142,7 +144,7 @@ function track(o: { kind: "track"; s: number; i: number }) {
     html: `<div class="hero"><div class="frame thumb" id="hero"><img alt="" src="https://i.ytimg.com/vi/${esc(yt)}/default.jpg" referrerpolicy="no-referrer"><span class="raster"></span></div>
         <div class="ident"><span class="code">${trackCode(o.s, o.i)} // TRACK</span><h2 id="dosTitle"></h2><span class="by">${esc(ch.an[ch.a[o.i]])}</span></div></div>
       <div class="rows">${row("ARTIST", esc(ch.an[ch.a[o.i]]))}${row("YEAR", ch.yr[o.i] ? String(ch.yr[o.i]) : "----")}
-        <div class="row"><span>LABEL</span>${p ? `<button class="link" data-r="${R({ kind: "planet", p: pi })}">${esc(p.name.toUpperCase())}</button>` : "<span>ASTEROID BELT</span>"}</div>
+        <div class="row"><span>LABEL</span>${p ? `<button class="link" data-r="${R({ kind: "planet", p: pi })}">${esc(p.name.toUpperCase())}</button>` : `<span>ASTEROID BELT${ore.has(yt) ? " · ORE MINED" : ""}</span>`}</div>
         <div class="row"><span>STYLE</span><button class="link" data-r="${R({ kind: "star", s: o.s })}">${esc(s.name.toUpperCase())}</button></div>
         ${row("COORDINATES", `${ch.x[o.i].toFixed(0)} / ${ch.y[o.i].toFixed(0)}`)}</div>
       <div class="scope-c"><canvas id="wave"></canvas></div>
@@ -179,7 +181,10 @@ export function paintDossierBeacon() {
 }
 
 export function initDossier() {
-  provide({ showSelection: (ms) => { renderDossier(); if (ms) decodeDossier(ms); } });
+  provide({
+    showSelection: (ms) => { renderDossier(); if (ms) decodeDossier(ms); },
+    oreFound: (n) => { say(`ORE MINED · ${n} ${n === 1 ? "ROCK" : "ROCKS"} DUG UP SO FAR`); renderDossier(); },
+  });
   $("detail").addEventListener("click", (e) => {
     const t = e.target as HTMLElement;
     const ps = t.closest<HTMLElement>("[data-route-star]"); if (ps) { startPick(+ps.dataset.routeStar!, "star"); return; }
@@ -187,6 +192,7 @@ export function initDossier() {
     const yr = t.closest<HTMLElement>("[data-years]"); if (yr) { playLightYears(+yr.dataset.years!); return; }
     const nb = t.closest<HTMLElement>("[data-neb]"); if (nb) { flyToNebula(+nb.dataset.neb!); return; }
     const po = t.closest<HTMLElement>("[data-orbit]"); if (po) { playOrbit(+po.dataset.orbit!); return; }
+    const dg = t.closest<HTMLElement>("[data-dig]"); if (dg) { digBelt(+dg.dataset.dig!); return; }
     if (t.closest("[data-like]")) { if (state.sel?.kind === "track") toggleBeacon(state.sel); return; }
     const sh = t.closest<HTMLElement>("[data-share]"); if (sh) { if (state.sel?.kind === "track") shareTrack(state.sel, sh.dataset.share as "copy" | "send", sh); return; }
     const b = t.closest<HTMLElement>("[data-r]"); if (!b) return;
