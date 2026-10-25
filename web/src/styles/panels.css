@@ -1,6 +1,10 @@
 /* The panel under the dossier: FLIGHT LOG, BEACONS and COMMS (the chat, its rooms, ON AIR). */
 /* one height for every tab: switching between them never moves the dossier above */
-.logp { flex: none; height: clamp(170px, 32%, 340px) }
+.logp { flex: none; height: var(--logp-h, clamp(240px, 44%, 520px)) }
+/* the grip on its top edge: drag to give the chat (or the dossier) more room */
+.logp-grip { position: absolute; left: 0; right: 0; top: -7px; height: 12px; cursor: row-resize; z-index: 2; touch-action: none }
+.logp-grip::after { content: ""; position: absolute; left: 50%; top: 4px; width: 38px; height: 3px; margin-left: -19px; border-top: 1px solid var(--faint); border-bottom: 1px solid var(--faint); opacity: .7 }
+.logp-grip:hover::after, .logp-grip.on::after { border-color: var(--ink); opacity: 1 }
 .log { flex: 1; min-height: 0; overflow: auto; padding: 6px 10px 8px }
 .loglines { display: flex; flex-direction: column; font-size: var(--fs-s) }
 .loglines button { display: flex; gap: 10px; background: none; border: 0; padding: 2px 0; cursor: var(--cur-hand, pointer); text-align: left; min-width: 0 }
@@ -28,7 +32,7 @@
 
 /* —— the chat */
 .comms { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 6px 10px 8px; gap: 6px }
-.comms-list { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 8px; font-size: var(--fs-s) }
+.comms-list { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 10px; font-size: var(--fs-m) }
 .msg { display: flex; gap: 8px; align-items: flex-start; min-width: 0 }
 .msg .ava { flex: none; margin-top: 1px; color: var(--ink); border: 1px solid var(--faint) }
 .m-b { flex: 1; min-width: 0; display: flex; flex-direction: column }
@@ -54,7 +58,7 @@
 .rk { color: var(--rk); font-family: var(--f-dot); font-size: var(--fs-xs); letter-spacing: .1em; border: 1px solid var(--rk); padding: 0 3px; line-height: 13px; white-space: nowrap; text-shadow: 0 0 4px var(--rk) }
 
 @media (max-width: 860px) {
-  .logp { height: clamp(150px, 42%, 280px) }
+  .logp { height: var(--logp-h, clamp(170px, 46%, 340px)) }
   .log { padding: 4px 8px 6px }
   .m-x { font-size: var(--fs-l); padding: 0 6px }
 }

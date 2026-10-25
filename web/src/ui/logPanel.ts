@@ -59,7 +59,28 @@ function showTab(tab: Tab) {
   if (tab === "comms") openComms();
 }
 
+/** the grip between the dossier and this panel: drag to share the height out; remembered in this browser */
+function initGrip() {
+  const grip = $("logGrip"), panel = grip.parentElement as HTMLElement, side = panel.parentElement as HTMLElement, KEY = "kosmos-logp-h";
+  const set = (px: number | null) => {
+    if (px === null) { panel.style.removeProperty("--logp-h"); try { localStorage.removeItem(KEY); } catch { /* */ } return; }
+    const max = side.clientHeight - 220, h = Math.max(150, Math.min(max, px)); // the dossier keeps room for its keys
+    panel.style.setProperty("--logp-h", `${h}px`);
+    try { localStorage.setItem(KEY, String(Math.round(h))); } catch { /* storage unavailable */ }
+  };
+  try { const v = Number(localStorage.getItem(KEY)); if (v) panel.style.setProperty("--logp-h", `${v}px`); } catch { /* */ }
+  grip.addEventListener("pointerdown", (e) => {
+    e.preventDefault(); grip.setPointerCapture(e.pointerId); grip.classList.add("on");
+    const y0 = e.clientY, h0 = panel.getBoundingClientRect().height, z = panel.getBoundingClientRect().height / (panel.offsetHeight || 1);
+    const move = (ev: PointerEvent) => set(h0 / z + (y0 - ev.clientY) / z);
+    const up = () => { grip.classList.remove("on"); grip.removeEventListener("pointermove", move); grip.removeEventListener("pointerup", up); };
+    grip.addEventListener("pointermove", move); grip.addEventListener("pointerup", up);
+  });
+  grip.addEventListener("dblclick", () => set(null));
+}
+
 export function initLogPanel() {
+  initGrip();
   const play = (e: Event) => { const b = (e.target as HTMLElement).closest<HTMLElement>("[data-s]"); if (b) select({ kind: "track", s: +b.dataset.s!, i: +b.dataset.i! }, true, true); };
   $("log").addEventListener("click", play);
   $("liked").addEventListener("click", (e) => {
