@@ -52,7 +52,7 @@ export function initBeta() {
   provide({
     locked: () => { say(`Closed beta: only ${openName()} is open. Sign in and ask for access, or enter an invite`, "err"); openPilot(); },
   });
-  document.getElementById("detail")!.addEventListener("click", (e) => { if ((e.target as HTMLElement).closest("[data-beta]")) openPilot(); });
+  document.querySelector(".dossier")!.addEventListener("click", (e) => { if ((e.target as HTMLElement).closest("[data-beta]")) openPilot(); });
   onPilot(() => { paint(); if (pilot.me?.admin && beta.on) founder(); });
   paint();
 }

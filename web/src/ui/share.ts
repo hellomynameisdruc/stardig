@@ -7,18 +7,22 @@ import { ALL, transmit } from "../cloud/comms";
 import { pilot } from "../cloud/pilots";
 import { openPilot } from "./pilot";
 import { flashKey, say } from "./rail";
+import { beta } from "../app/beta";
 
-export async function shareTrack(o: { s: number; i: number }, how: "copy" | "send", key?: HTMLElement | null) {
+/** shares; the key it was pressed on says how it went (COPIED ✓ / SENT ✓ / NOT SENT), the rail says more */
+export async function shareTrack(o: { s: number; i: number }, how: "copy" | "send", key?: HTMLElement | null): Promise<boolean> {
   const link = signalLink(o.s, o.i);
   if (how === "copy") {
-    try { await navigator.clipboard.writeText(link); if (key?.classList.contains("key")) flashKey(key, "COPIED ✓"); say("Link copied. Paste it in COMMS or anywhere"); }
-    catch { say(`Copy this link: ${link}`, "err"); }
-    return;
+    try { await navigator.clipboard.writeText(link); flashKey(key ?? null, "COPIED ✓"); say("Link copied. Paste it in COMMS or anywhere"); return true; }
+    catch { flashKey(key ?? null, "✕ NOT COPIED"); say(`Copy this link: ${link}`, "err"); return false; }
   }
-  if (!pilot.me) { openPilot(); return; }
+  if (!pilot.me) { openPilot(); return false; }
+  if (!beta.open) { flashKey(key ?? null, "✕ NEEDS ACCESS"); say("Closed beta: COMMS opens once you have access", "err"); return false; }
+  if (key) { key.dataset.label ??= key.innerHTML; key.textContent = "SENDING…"; }
   const e = await transmit(ALL, link);
-  if (e) say(e === "too-fast" ? "Too fast. One message every few seconds" : "Couldn't send it. Try again", "err");
-  else { if (key?.classList.contains("key")) flashKey(key, "SENT ✓"); say("Sent to COMMS · ALL"); }
+  if (key?.dataset.label) { key.innerHTML = key.dataset.label; delete key.dataset.label; }
+  if (e) { flashKey(key ?? null, "✕ NOT SENT"); say(e === "too-fast" ? "Too fast. One message every few seconds" : "Couldn't send it. Try again", "err"); return false; }
+  flashKey(key ?? null, "SENT TO COMMS ✓"); say("Sent to COMMS · ALL: everyone sees it as a card"); return true;
 }
 
 /** the player's share key: a small menu over it, for the track on air */
@@ -29,7 +33,8 @@ export function initShareKey() {
   pop.addEventListener("click", (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>("[data-share]"); const np = state.nowPlaying;
     if (!b || !np) return;
-    close(); shareTrack(np, b.dataset.share as "copy" | "send");
+    // the menu stays a moment so its key can say how it went
+    shareTrack(np, b.dataset.share as "copy" | "send", b).then(() => setTimeout(close, 1300));
   });
   addEventListener("pointerdown", (e) => { if (!pop.hidden && !pop.contains(e.target as Node) && e.target !== key && !key.contains(e.target as Node)) close(); });
   pop.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.stopPropagation(); close(); key.focus(); } });

@@ -22,11 +22,13 @@
 .ident .by { font-size: var(--fs-m); color: var(--dim); overflow-wrap: anywhere }
 .stamp { align-self: flex-start; border: 1px solid var(--acc); color: var(--acc); padding: 2px 6px; font-family: var(--f-dot); font-size: var(--fs-s); letter-spacing: .14em }
 
-.rows { display: flex; flex-direction: column; border-top: 1px solid var(--line) }
-.row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 5px 2px; border-bottom: 1px solid var(--line); min-width: 0 }
-.row > span:first-child { font-family: var(--f-dot); font-size: var(--fs-m); letter-spacing: .1em; color: var(--dim); flex: none }
-.row > span:last-child, .row > button { text-align: right; min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums }
-.link { background: none; border: 0; padding: 0; cursor: var(--cur-hand, pointer); color: var(--acc); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--acc) 45%, transparent); text-underline-offset: 3px; text-align: right }
+/* the facts: a two-column grid, each a small label over its value; long values take the whole row */
+.rows { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-flow: row dense; column-gap: 12px; border-top: 1px solid var(--line) }
+.row { display: flex; flex-direction: column; gap: 3px; padding: 6px 8px 7px 0; border-bottom: 1px solid var(--line); min-width: 0 }
+.row.wide { grid-column: 1 / -1 }
+.row > span:first-child { font-family: var(--f-dot); font-size: var(--fs-xs); letter-spacing: .14em; color: var(--dim); flex: none }
+.row > span:last-child, .row > button { text-align: left; min-width: 0; overflow-wrap: anywhere; font-size: var(--fs-m); font-variant-numeric: tabular-nums }
+.link { background: none; border: 0; padding: 0; cursor: var(--cur-hand, pointer); color: var(--acc); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--acc) 45%, transparent); text-underline-offset: 3px; text-align: left; align-self: flex-start; font: inherit; font-size: var(--fs-m) }
 .link:hover { text-decoration-color: var(--ink) }
 
 .bars { display: flex; flex-direction: column; gap: 4px }
@@ -100,3 +102,16 @@
 /* the quiet links under a track: copy, send to COMMS, open on YouTube */
 .outs { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline }
 button.out { background: none; border: 0; border-bottom: 1px dotted var(--faint); padding: 0; font: inherit; font-size: var(--fs-s); color: var(--dim); cursor: var(--cur-hand, pointer) }
+
+/* the dossier's keys: a bar under it that never scrolls away — the big key, then the others two by two */
+.dacts { flex: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px 10px; border-top: 1px solid var(--line); background: var(--panel-bg, transparent) }
+.dacts:empty { display: none }
+.dacts .play { flex: 1 1 100% }
+.dacts .plot { flex: 1 1 calc(50% - 3px); margin-top: 0; padding: 6px 4px; font-size: var(--fs-s); letter-spacing: .1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.dacts .plot > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.dacts .outs { flex: 1 1 100%; justify-content: center }
+/* explanations fold away */
+.about { border: 1px dashed var(--line); padding: 6px 8px }
+.about summary { cursor: var(--cur-hand, pointer); font-family: var(--f-dot); font-size: var(--fs-xs); letter-spacing: .14em; color: var(--dim); list-style: none }
+.about summary::before { content: "? " }
+.about[open] summary { margin-bottom: 6px }

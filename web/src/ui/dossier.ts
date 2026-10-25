@@ -21,7 +21,8 @@ let dosAnim: ((t: number) => void) | null = null;
 /** objects behind data-r buttons of the current render */
 const refs: Sel[] = [];
 const R = (o: Sel) => { refs.push(o); return refs.length - 1; };
-const row = (k: string, v: string) => `<div class="row"><span>${k}</span><span>${v}</span></div>`;
+/** a fact: label over value; a long value takes the whole width */
+const row = (k: string, v: string) => `<div class="row${v.replace(/<[^>]*>/g, "").length > 20 ? " wide" : ""}"><span>${k}</span><span>${v}</span></div>`;
 const meter = (k: string, frac: number, val: string, ref?: number, color?: string) =>
   `<div class="bar-r${ref !== undefined ? " click" : ""}"${ref !== undefined ? ` data-r="${ref}"` : ""}${color ? ` style="--c:${color}"` : ""}><span>${esc(k)}</span><span class="meter"><i style="width:${Math.max(2, Math.min(100, frac * 100)).toFixed(1)}%"></i></span><span>${val}</span></div>`;
 const trackItem = (s: number, i: number, n: number) => {
@@ -73,8 +74,8 @@ function star(si: number) {
     code: `STAR // ST-${pad(si, 2)}`, title: s.name.toUpperCase(),
     html: `<div class="hero"><div class="frame" id="hero"><canvas></canvas></div>
         <div class="ident"><span class="code">ST-${pad(si, 2)} // STYLE</span><h2 id="dosTitle"></h2><span class="stamp">${neb ? `${(s.tracks * 100 / Math.max(1, neb.tracks)).toFixed(1)}% OF ${esc(neb.name.toUpperCase())}` : `${(s.tracks * 100 / g.totalTracks).toFixed(1)}% OF SECTOR`}</span></div></div>
-      <div class="rows">${neb ? `<div class="row"><span>GALAXY</span><button class="link" data-neb="${g.nebulae.indexOf(neb)}">${esc(neb.name.toUpperCase())}</button></div>` : ""}${row("RELEASES", fmt(s.n))}${row("PLANETS / LABELS", fmt(pl.length))}${row("TRACKS", fmt(s.tracks))}${row("CLASS", `${g.sclass[si]} · ${g.starClassName(si)}`)}${row("LUMINOSITY", `${Math.round(g.recentShare[si] * 100)}% RELEASES IN LAST 10 YRS`)}${row("TYPICAL TEMPO", tempoLabel(g.tempo[si]))}${row("PEAK YEAR", String(g.peakYear[si]))}${s.belts ? row("ASTEROID BELTS", s.belts.map(([a, b]) => `${a}–${b}`).join(" · ")) : ""}</div>
-      <p class="note">Size shows how many releases the style has; glow shows how alive it is today. The star pulses at the tempo typical for its style (styles without a steady beat just breathe slowly) and sheds a shell once every bar. Tempo is the usual range for the style, not measured from the tracks.</p>
+      <div class="rows">${neb ? `<div class="row"><span>GALAXY</span><button class="link" data-neb="${g.nebulae.indexOf(neb)}">${esc(neb.name.toUpperCase())}</button></div>` : ""}${row("RELEASES", fmt(s.n))}${row("PLANETS / LABELS", fmt(pl.length))}${row("TRACKS", fmt(s.tracks))}${row("CLASS", `${g.sclass[si]} · ${g.starClassName(si)}`)}${row("LUMINOSITY", `${Math.round(g.recentShare[si] * 100)}% IN LAST 10 YRS`)}${row("TYPICAL TEMPO", tempoLabel(g.tempo[si]))}${row("PEAK YEAR", String(g.peakYear[si]))}${s.belts ? row("ASTEROID BELTS", s.belts.map(([a, b]) => `${a}–${b}`).join(" · ")) : ""}</div>
+      <details class="about"><summary>HOW TO READ A STAR</summary><p class="note">Size shows how many releases the style has; glow shows how alive it is today. The star pulses at the tempo typical for its style (styles without a steady beat just breathe slowly) and sheds a shell once every bar. Tempo is the usual range for the style, not measured from the tracks.</p></details>
       ${s.yh?.length ? hist(s.yh, g.Y0, "ACTIVITY // RELEASES PER YEAR") : ""}
       ${!g.meta.sample && pl.length ? `<button class="play" data-system="${si}">▶ HITCHHIKE THE SYSTEM</button>` : ""}
       ${!g.meta.sample && beltSize(si) > 0 ? `<button class="plot crt dig" data-dig="${si}" title="Drill into a random asteroid: a track with no label at all — self-released, white labels, the unknown. Every new one you hear is ore."><span>⛏ DIG THE BELT · ${fmt(beltSize(si))} ROCKS</span></button>` : ""}
@@ -164,7 +165,10 @@ export function renderDossier() {
   document.querySelector<HTMLElement>(".dossier")!.style.setProperty("--acc", accSi >= 0 ? galaxy.stars[accSi].color : "");
   const v = !o ? sector() : o.kind === "star" ? star(o.s) : o.kind === "planet" ? planet(o.p, o) : track(o);
   d.innerHTML = v.html; d.scrollTop = 0;
-  lockDossier(d); // closed beta
+  // the keys (play, stations, routes, beacon, links) live in a bar under the dossier, always in view
+  const acts = $("dosActs"); acts.innerHTML = "";
+  d.querySelectorAll<HTMLElement>(":scope > .play, :scope > .plot, :scope > .outs").forEach((el) => acts.appendChild(el));
+  lockDossier(acts); // closed beta
   // all meters of a dossier share one label column, as wide as its longest label
   const labs = d.querySelectorAll<HTMLElement>(".bar-r > span:first-child");
   if (labs.length) { d.style.setProperty("--lbl", "max-content"); const w = Math.max(...[...labs].map((e) => e.scrollWidth)); d.style.setProperty("--lbl", w > 20 ? `${Math.min(w + 2, 170)}px` : ""); }
@@ -179,7 +183,7 @@ export function renderDossier() {
 
 /** refresh just the beacon button of a track dossier */
 export function paintDossierBeacon() {
-  const b = document.querySelector<HTMLElement>("#detail [data-like]"), sel = state.sel;
+  const b = document.querySelector<HTMLElement>(".dossier [data-like]"), sel = state.sel;
   if (b && sel?.kind === "track") { const on = beacons.has(sel); b.innerHTML = beaconLabel(on); b.classList.toggle("on", on); }
 }
 
@@ -188,7 +192,7 @@ export function initDossier() {
     showSelection: (ms) => { renderDossier(); if (ms) decodeDossier(ms); },
     oreFound: (n) => { say(`ORE MINED · ${n} ${n === 1 ? "ROCK" : "ROCKS"} DUG UP SO FAR`); renderDossier(); },
   });
-  $("detail").addEventListener("click", (e) => {
+  const click = (e: Event) => {
     const t = e.target as HTMLElement;
     const ps = t.closest<HTMLElement>("[data-route-star]"); if (ps) { startPick(+ps.dataset.routeStar!, "star"); return; }
     const sy = t.closest<HTMLElement>("[data-system]"); if (sy) { playSystem(+sy.dataset.system!); return; }
@@ -202,6 +206,8 @@ export function initDossier() {
     const o = refs[+b.dataset.r!];
     if (o?.kind === "track") { select(o, true, !!b.dataset.play); return; }
     select(o);
-  });
+  };
+  $("detail").addEventListener("click", click);
+  $("dosActs").addEventListener("click", click);
   onFrame((t) => dosAnim?.(t));
 }

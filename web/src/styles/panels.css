@@ -1,6 +1,6 @@
 /* The panel under the dossier: FLIGHT LOG, BEACONS and COMMS (the chat, its rooms, ON AIR). */
 /* one height for every tab: switching between them never moves the dossier above */
-.logp { flex: none; height: clamp(200px, 40%, 400px) }
+.logp { flex: none; height: clamp(170px, 32%, 340px) }
 .log { flex: 1; min-height: 0; overflow: auto; padding: 6px 10px 8px }
 .loglines { display: flex; flex-direction: column; font-size: var(--fs-s) }
 .loglines button { display: flex; gap: 10px; background: none; border: 0; padding: 2px 0; cursor: var(--cur-hand, pointer); text-align: left; min-width: 0 }
