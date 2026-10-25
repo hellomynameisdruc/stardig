@@ -22,7 +22,7 @@ const selStar = () => { const o = state.sel; return !o ? -1 : o.kind === "planet
 /** outside the open galaxy, the dossier's play keys become one GET ACCESS key */
 export function lockDossier(d: HTMLElement) {
   const s = selStar(); if (s < 0 || starOpen(s)) return;
-  const keys = d.querySelectorAll<HTMLElement>("[data-play], [data-orbit], [data-system], [data-dig], [data-years]");
+  const keys = d.querySelectorAll<HTMLElement>("[data-play], [data-orbit], [data-system], [data-dig], [data-years], [data-route-star]");
   if (!keys.length) return;
   keys[0].insertAdjacentHTML("beforebegin", `<button class="play beta-lock" data-beta="1" title="The closed beta: ${openName()} is open to everyone; the rest of the map needs access">⊘ CLOSED BETA · GET ACCESS</button>`);
   keys.forEach((k) => k.remove());

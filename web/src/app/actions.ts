@@ -167,7 +167,11 @@ export function toggleBeacon(r: TrackRef | null) { beacons.toggle(r, r ? galaxy.
 export async function buildRoute(a: number, b: number) {
   // the course itself is instant; show it and fly out at once, then tune in the stops' tracks
   // (their systems' track files may still be on the way)
-  const plan = planRoute(galaxy, a, b), pending = { ...plan, tracks: plan.stops.map(() => []), flat: [], loading: true };
+  const plan = planRoute(galaxy, a, b);
+  // closed beta: an odyssey keeps to the open galaxy unless this visitor has access
+  const shut = plan.stops.find((pi) => !starOpen(galaxy.planets[pi].s));
+  if (shut !== undefined) { ui.locked(galaxy.planets[shut].s); return; }
+  const pending = { ...plan, tracks: plan.stops.map(() => []), flat: [], loading: true };
   state.route = pending; state.routeIdx = -1;
   replaceHash(`#r${a}-${b}`);
   ui.showRoute(); fitRoute(); state.dirty = true;
@@ -257,8 +261,10 @@ function nearestStarToCam() { let b = 0, bd = Infinity; galaxy.stars.forEach((s,
 export function warp() {
   if (state.warping) return;
   const { stars } = galaxy;
-  let r = Math.random() * galaxy.totalTracks, s = 0;
-  while (s < stars.length - 1 && r > stars[s].tracks) { r -= stars[s].tracks; s++; }
+  // a random star, by its tracks (closed beta: only among the stars this visitor may play)
+  const ok = stars.map((_, k) => starOpen(k)), total = stars.reduce((a, st, k) => a + (ok[k] ? st.tracks : 0), 0);
+  let r = Math.random() * total, s = ok.indexOf(true);
+  for (let k = 0; k < stars.length; k++) { if (!ok[k]) continue; s = k; if (r <= stars[k].tracks) break; r -= stars[k].tracks; }
   // the jump starts at once; the destination's tracks download while the tunnel runs
   const n = stars[s].tracks, loaded = tracks.load(s);
   let i = Math.floor(Math.random() * n);
