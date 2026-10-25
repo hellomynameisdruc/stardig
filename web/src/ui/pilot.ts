@@ -43,7 +43,7 @@ function body() {
     ${nextRank(me.rank)}
     <dl class="pl-stats"><dt>BEACONS</dt><dd>${beacons.size}</dd><dt>FLIGHTS LOGGED</dt><dd>${flightsTotal()}</dd><dt>ORE MINED</dt><dd>${ore.size}</dd>${beta.on ? `<dt>ACCESS</dt><dd>${me.access || me.admin ? "OPEN" : "WAITING"}</dd>` : ""}<dt>EMAIL</dt><dd>${esc(pilot.session?.user.email ?? "")}</dd></dl>
     ${beta.on && !me.access && !me.admin ? `<div class="pl-beta"><p class="pl-text">CLOSED BETA · WAITING FOR ACCESS</p>
-      <p class="pl-small">${esc(openName())} is open to everyone. The rest of the map, COMMS and broadcasting open once the founder lets you in, or with an invite code:</p>
+      <p class="pl-small">The ${esc(openName())} star is open to everyone. The rest of the map, COMMS and broadcasting open once the founder lets you in, or with an invite code:</p>
       <form class="row-in" id="plInv"><input class="field" id="plCode" placeholder="INVITE CODE" maxlength="16" autocomplete="off" spellcheck="false" autocapitalize="characters"><button class="key hot" ${busy ? "disabled" : ""}>ENTER ▸</button></form></div>` : ""}
     <p class="pl-small">Beacons, the flight log and your ore are kept with your account, on every device you sign in on.</p>
     <div class="pl-foot"><button type="button" class="key" id="plOut">SIGN OUT</button>

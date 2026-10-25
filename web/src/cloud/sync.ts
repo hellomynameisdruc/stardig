@@ -93,7 +93,15 @@ export function initSync() {
   flightLog.changed.on(() => { if (applying) return; counts[dev] = (counts[dev] ?? 0) + 1; saveCounts(); later(); });
   onPilot(() => {
     const id = pilot.me?.id ?? null; if (id === uid) return;
-    uid = id; ready = false; if (uid) pull();
+    const was = uid; uid = id; ready = false;
+    if (uid) { pull(); return; }
+    // signed out: the logbook lives with the account; this browser forgets it (nothing is sent)
+    if (was) {
+      clearTimeout(timer); applying = true;
+      try { beacons.replaceAll([]); flightLog.replaceAll([]); ore.clear(); }
+      finally { applying = false; }
+      gone = {}; browserKV.set(GONE, "{}"); counts = {}; saveCounts(); known = new Set();
+    }
   });
   // coming back to the tab: pick up what other devices added meanwhile
   document.addEventListener("visibilitychange", () => { if (!document.hidden && uid) pull(); });

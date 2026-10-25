@@ -29,5 +29,7 @@ export class Ore {
     for (const y of list) if (typeof y === "string" && this.ids.size < MAX) this.ids.add(y);
     if (this.ids.size !== n) { this.save(); this.changed.emit(); }
   }
+  /** forget them all (signing out) */
+  clear() { if (!this.ids.size) return; this.ids.clear(); this.save(); this.changed.emit(); }
   private save() { this.kv.set(KEY, JSON.stringify([...this.ids])); }
 }

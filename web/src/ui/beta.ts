@@ -12,7 +12,7 @@ function paint() {
   const me = pilot.me, was = beta.open;
   beta.open = !!(me && (me.access || me.admin));
   if (beta.open || !beta.on) clearMode("beta");
-  else setMode("beta", `<b>CLOSED BETA</b> · ${openName().toUpperCase()} IS OPEN TO ALL${me ? " · WAITING FOR ACCESS" : ""}`, [{ label: me ? "ENTER INVITE" : "GET ACCESS", run: () => openPilot() }]);
+  else setMode("beta", `<b>CLOSED BETA</b> · THE ${openName().toUpperCase()} STAR IS OPEN TO ALL${me ? " · WAITING FOR ACCESS" : ""}`, [{ label: me ? "ENTER INVITE" : "GET ACCESS", run: () => openPilot() }]);
   if (was !== beta.open) ui.showSelection(0); // the dossier's keys open up (or lock)
 }
 
