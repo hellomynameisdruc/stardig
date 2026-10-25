@@ -24,7 +24,7 @@ function liveSurface(i: number, D: number, spin: number, slot: number) {
   const pl = galaxy.planets[i], src = surface(pl.name, galaxy.ptype[i], pl.s, D, q * step);
   if (!e) { if (live.size > 8) live.delete(live.keys().next().value!); e = { c: document.createElement("canvas"), D: 0, q: 0, fine: false, at: 0 }; live.set(id, e); }
   if (e.c.width !== D || e.c.height !== D) { e.c.width = D; e.c.height = D; } // a new canvas is 300×150: check both
-  const g = e.c.getContext("2d")!; g.clearRect(0, 0, D, D); g.drawImage(src, 0, 0);
+  const g = e.c.getContext("2d", { willReadFrequently: true })!; g.clearRect(0, 0, D, D); g.drawImage(src, 0, 0);
   e.D = D; e.q = q; e.fine = fine; e.at = performance.now();
   return e.c;
 }

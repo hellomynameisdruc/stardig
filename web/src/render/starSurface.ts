@@ -32,7 +32,7 @@ export function starFace(si: number, name: string, D: number): HTMLCanvasElement
   const c = document.createElement("canvas"); c.width = c.height = D;
   cache.set(key, c); nearest.set(si, D);
   if (cache.size > MAX_FACES) cache.delete(cache.keys().next().value!);
-  const g = c.getContext("2d")!, img = g.createImageData(D, D), d = img.data, R = D / 2, col = SC[si];
+  const g = c.getContext("2d", { willReadFrequently: true })!, img = g.createImageData(D, D), d = img.data, R = D / 2, col = SC[si];
   const m = BG.replace("#", ""), bg = [0, 2, 4].map((k) => parseInt(m.slice(k, k + 2), 16) || 0);
   const n = Math.max(18, Math.min(60, Math.round(D * 0.5))), P = granules(si, name, n), id = new Int16Array(D * D).fill(-1);
   for (let j = 0; j < D; j++) for (let i = 0; i < D; i++) {

@@ -95,7 +95,7 @@ function texture(name: string, ty: PType, w: number): Tex {
 type Geo = { on: Uint8Array; lon: Float32Array; lat: Float32Array; lam: Float32Array; img: ImageData };
 const geoCache = new Map<number, Geo>();
 const scratch = document.createElement("canvas");
-const sg = scratch.getContext("2d")!;
+const sg = scratch.getContext("2d", { willReadFrequently: true })!; // pixels are written here: keep it off the GPU (no sync stalls)
 function geo(D: number): Geo {
   let g = geoCache.get(D); if (g) return g;
   const n = D * D, on = new Uint8Array(n), lon = new Float32Array(n), lat = new Float32Array(n), lam = new Float32Array(n), R = D / 2;
