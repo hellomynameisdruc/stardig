@@ -22,6 +22,12 @@ export const withoutSignal = (text: string) => text.replace(/\S*#sig-[A-Za-z0-9_
 const found = new Map<string, { s: number; i: number } | null>(), pending = new Map<string, Promise<{ s: number; i: number } | null>>();
 /** where the signal is on this map now, if its style's tracks are loaded (else undefined: ask find()) */
 export function placed(sig: Signal) { return found.get(`${sig.yt}.${sig.star}`); }
+// a chat full of shared tracks from many styles would load all their stars at once: take turns
+let line: Promise<void> = Promise.resolve();
+function queued() {
+  const turn = line.then(() => new Promise<void>((r) => setTimeout(r, 350)));
+  line = turn; return turn;
+}
 export function find(sig: Signal) {
   const key = `${sig.yt}.${sig.star}`;
   if (found.has(key)) return Promise.resolve(found.get(key)!);
@@ -29,6 +35,7 @@ export function find(sig: Signal) {
   if (!p) {
     p = (async () => {
       const s = galaxy.starIndex(sig.star); if (s < 0) return null;
+      if (!chunk(s)) await queued(); // stars not loaded yet come in one at a time, not all at once
       const i = await locateYt(s, sig.yt).catch(() => -1); // the vault too
       return i >= 0 ? { s, i } : null;
     })().then((r) => { found.set(key, r); pending.delete(key); return r; });

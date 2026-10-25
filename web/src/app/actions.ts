@@ -69,7 +69,7 @@ export function playTrack(ref: TrackRef) {
   const h = state.history, last = h[h.length - 1];
   if (!last || last.i !== ref.i || last.s !== ref.s) h.push(ref);
   ui.loadTrack(ref);
-  flightLog.add(ref, Date.now(), { b: galaxy.meta.build, y: ch.yt[ref.i], st: galaxy.stars[ref.s].name });
+  flightLog.add(ref, Date.now(), { b: galaxy.meta.build, y: ch.yt[ref.i], st: galaxy.stars[ref.s].name, ti: ch.t[ref.i], ar: ch.an[ch.a[ref.i]] });
   if (ch.p[ref.i] < 0 && ore.add(ch.yt[ref.i])) ui.oreFound(ore.size); // a belt track heard: ore
   ui.stats(); state.dirty = true;
 }

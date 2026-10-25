@@ -5,9 +5,10 @@ import { type KV, readJSON, Signal } from "./storage";
 
 const KEY = "kosmos-log2";
 const MAX = 40;
-/** k = "<star>-<track>" on map build b; y = YouTube id; st = star name */
-export type LogEntry = { k: string; t: number; b?: string; y?: string; st?: string };
-export type LogRef = TrackRef & { t: number; b?: string; y?: string; st?: string };
+/** k = "<star>-<track>" on map build b; y = YouTube id; st = star name; ti / ar = title and artist (so
+ *  the log can be shown without loading the stars' track files) */
+export type LogEntry = { k: string; t: number; b?: string; y?: string; st?: string; ti?: string; ar?: string };
+export type LogRef = TrackRef & { t: number; b?: string; y?: string; st?: string; ti?: string; ar?: string };
 
 export class FlightLog {
   private list: LogEntry[];
@@ -18,11 +19,13 @@ export class FlightLog {
   }
   get all(): readonly LogEntry[] { return this.list; }
   get size() { return this.list.length; }
-  add(r: TrackRef, now = Date.now(), info: { b?: string; y?: string; st?: string } = {}) {
+  add(r: TrackRef, now = Date.now(), info: { b?: string; y?: string; st?: string; ti?: string; ar?: string } = {}) {
     const k = `${r.s}-${r.i}`, e: LogEntry = { k, t: now };
     if (info.b) e.b = info.b;
     if (info.y) e.y = info.y;
     if (info.st) e.st = info.st;
+    if (info.ti) e.ti = info.ti.slice(0, 120);
+    if (info.ar) e.ar = info.ar.slice(0, 80);
     this.list = [e, ...this.list.filter((x) => (e.y && x.y ? x.y !== e.y : x.k !== k))].slice(0, MAX);
     this.kv.set(KEY, JSON.stringify(this.list)); this.changed.emit();
   }
@@ -33,6 +36,6 @@ export class FlightLog {
   }
   /** entries as track references (as saved; see locate() for finding them on the current map) */
   refs(): LogRef[] {
-    return this.list.map((x) => { const [s, i] = x.k.split("-").map(Number); return { s, i, t: x.t, b: x.b, y: x.y, st: x.st }; });
+    return this.list.map((x) => { const [s, i] = x.k.split("-").map(Number); return { s, i, t: x.t, b: x.b, y: x.y, st: x.st, ti: x.ti, ar: x.ar }; });
   }
 }

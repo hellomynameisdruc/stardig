@@ -21,32 +21,42 @@ async function locate(e: { s: number; i: number; b?: string; y?: string; st?: st
   return ch && e.i < ch.yt.length ? { s: e.s, i: e.i } : null;
 }
 
-export async function renderLog() {
-  const el = $("log"), stars = galaxy.stars;
-  const items = flightLog.refs();
-  const found = await Promise.all(items.map(locate));
-  const ok = items.flatMap((r, k) => (found[k] ? [{ ...found[k]!, t: r.t }] : []));
-  el.innerHTML = ok.length
-    ? ok.map((r) => { const d = new Date(r.t); return `<button data-s="${r.s}" data-i="${r.i}"><time>${pad(d.getHours(), 2)}:${pad(d.getMinutes(), 2)}</time><span title="${esc(`${chunk(r.s)!.an[chunk(r.s)!.a[r.i]]} — ${chunk(r.s)!.t[r.i]}`)}">▸ ${esc(chunk(r.s)!.t[r.i])} · ${esc(stars[r.s].name.toUpperCase())}</span></button>`; }).join("")
+// The log and the beacons are drawn from what they saved (title, artist, style), never by loading the
+// stars' track files: a long log across many styles would load them all, freezing the page and filling
+// memory. A track is found on the map only when it's clicked.
+let logRefs: ReturnType<typeof flightLog.refs> = [];
+export function renderLog() {
+  const el = $("log"); logRefs = flightLog.refs();
+  el.innerHTML = logRefs.length
+    ? logRefs.map((r, k) => {
+      // older entries saved no title: use it if their star happens to be loaded already
+      const d = new Date(r.t), sn = galaxy.starIndex(r.st), s = sn >= 0 ? sn : r.s, ch = r.ti ? null : chunk(s);
+      const i = !ch ? -1 : r.y ? ch.yt.indexOf(r.y) : r.b === galaxy.meta.build && r.i < ch.t.length ? r.i : -1;
+      const title = r.ti ?? (i >= 0 ? ch!.t[i] : "Signal"), artist = r.ar ?? (i >= 0 ? ch!.an[ch!.a[i]] : ""), style = r.st ?? galaxy.stars[r.s]?.name ?? "";
+      return `<button data-log="${k}"><time>${pad(d.getHours(), 2)}:${pad(d.getMinutes(), 2)}</time><span title="${esc(artist ? `${artist} — ${title}` : title)}">▸ ${esc(title)} · ${esc(style.toUpperCase())}</span></button>`;
+    }).join("")
     : `<p class="note">NO ENTRIES YET. SIGNALS YOU PLAY WILL SHOW UP HERE.</p>`;
 }
 
-export async function renderBeacons() {
-  const el = $("liked"), stars = galaxy.stars;
+export function renderBeacons() {
+  const el = $("liked");
   $("likedN").textContent = String(beacons.size);
   if (el.hidden) return;
   if (!beacons.size) { el.innerHTML = `<p class="note">NO BEACONS YET. SET ONE ON A TRACK YOU LOVE: THE BEACON KEY OR <kbd>L</kbd>.</p>`; return; }
-  // each beacon's star: by name if it has one (survives rebuilds), else the saved number
-  const starOf = beacons.all.map((b) => { const n = galaxy.starIndex(b.st); return n >= 0 ? n : b.s; });
-  // where each beacon is now: by YouTube id in its star's tracks, or brought in from the vault
-  const at = await Promise.all(beacons.all.map((b, k) => (starOf[k] < stars.length ? locateYt(starOf[k], b.y, starOf[k] === b.s ? b.i : -1).catch(() => -1) : Promise.resolve(-1))));
   const parts = beacons.playlistLinks();
   const links = parts.map((href, k) => `<a class="ytlist" href="${href}" target="_blank" rel="noopener">▶ OPEN AS YOUTUBE PLAYLIST${parts.length > 1 ? ` · PART ${k + 1}/${parts.length}` : ""} ↗</a>`).join("");
   el.innerHTML = links + `<p class="note ythint">Opens on YouTube; use “Save” there to keep it in your library.</p>` +
     beacons.all.map((b, k) => {
-      const r = at[k] >= 0 ? { s: starOf[k], i: at[k] } : null;
-      return `<div class="lk"><button ${r ? `data-s="${r.s}" data-i="${r.i}"` : "disabled"}><time>${pad(k + 1, 2)}</time><span title="${esc(`${b.a ?? ""} — ${b.t ?? ""}`)}">▸ ${esc(b.a ?? "")} — ${esc(b.t ?? "")}${r ? ` · ${esc(stars[r.s].name.toUpperCase())}` : ""}</span></button><button class="unlike" data-y="${esc(b.y)}" aria-label="Remove beacon">×</button></div>`;
+      const style = b.st ?? galaxy.stars[b.s]?.name ?? "";
+      return `<div class="lk"><button data-bk="${k}"><time>${pad(k + 1, 2)}</time><span title="${esc(`${b.a ?? ""} — ${b.t ?? ""}`)}">▸ ${esc(b.a ?? "")} — ${esc(b.t ?? "")}${style ? ` · ${esc(style.toUpperCase())}` : ""}</span></button><button class="unlike" data-y="${esc(b.y)}" aria-label="Remove beacon">×</button></div>`;
     }).join("");
+}
+
+/** fly to a saved track and play it (found now: by id in its star, or from the vault) */
+async function go(e: { s: number; i: number; b?: string; y?: string; st?: string }, key: HTMLElement) {
+  key.classList.add("busy");
+  const r = await locate(e); key.classList.remove("busy");
+  if (r) select({ kind: "track", ...r }, true, true); else { key.setAttribute("disabled", ""); key.title = "Not on the map any more"; }
 }
 
 type Tab = "log" | "liked" | "comms";
@@ -81,12 +91,12 @@ function initGrip() {
 
 export function initLogPanel() {
   initGrip();
-  const play = (e: Event) => { const b = (e.target as HTMLElement).closest<HTMLElement>("[data-s]"); if (b) select({ kind: "track", s: +b.dataset.s!, i: +b.dataset.i! }, true, true); };
-  $("log").addEventListener("click", play);
+  $("log").addEventListener("click", (e) => { const b = (e.target as HTMLElement).closest<HTMLElement>("[data-log]"); const r = b && logRefs[+b.dataset.log!]; if (r) go(r, b!); });
   $("liked").addEventListener("click", (e) => {
     const u = (e.target as HTMLElement).closest<HTMLElement>("[data-y]");
     if (u) { beacons.remove(u.dataset.y!); return; }
-    play(e);
+    const b = (e.target as HTMLElement).closest<HTMLElement>("[data-bk]"), bk = b && beacons.all[+b.dataset.bk!];
+    if (bk) go({ s: bk.s, i: bk.i, y: bk.y, st: bk.st }, b!);
   });
   $("tabLog").onclick = () => showTab("log");
   $("tabLiked").onclick = () => showTab("liked");
