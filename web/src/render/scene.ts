@@ -7,7 +7,7 @@ import { cam, LOD_TRACKS } from "./camera";
 import { inView, MARGIN, updateLiveView } from "./view";
 import { labels } from "./labels";
 import { drawPulsar, pulseOf, starSize } from "./pulsar";
-import { drawPlanets, tickSprites } from "./planets";
+import { drawPlanets, resetSurfaces, tickSprites } from "./planets";
 import { tickFaces } from "./starSurface";
 import { drawSatellites } from "./satellites";
 import { drawStation } from "./station";
@@ -33,7 +33,7 @@ const slow: number[] = [];
 function watchFrame(dt: number) {
   slow.push(dt); if (slow.length < 90) return;
   const avg = slow.reduce((a, b) => a + b, 0) / slow.length; slow.length = 0;
-  if (avg > 30 && quality > 1) { quality = Math.max(1, quality - 0.25); resize(); }
+  if (avg > 30 && quality > 1) { quality = Math.max(1, quality - 0.25); resetSurfaces(); resize(); } // sprites are painted for one resolution
 }
 function resize() {
   // sizes in the page's own px; DPR counts the page zoom so the canvases stay pixel-sharp
