@@ -37,6 +37,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # the site on lived-in data (a long flight log, a chat full of shared tracks), phone and laptop:
+      # no style loaded that nobody looks at, no freezes, no runaway memory (web/e2e/load.py)
+      - name: Site — load test
+        working-directory: web
+        run: |
+          pip install playwright==1.48.0 && python -m playwright install --with-deps chromium
+          npm run build && (npx vite preview --port 4173 --strictPort &) && sleep 3
+          python e2e/load.py
       - name: Pipeline — lint, tests
         working-directory: pipeline
         run: pip install -r requirements-dev.txt && ruff check . && python -m pytest -q tests
