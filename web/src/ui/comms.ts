@@ -43,17 +43,26 @@ function awaitSignal(sig: { yt: string; star: string }) {
   const k = `${sig.yt}.${sig.star}`; if (asked.has(k)) return; asked.add(k);
   find(sig).then(paintSoon, paintSoon);
 }
-/** a shared track: its cover (in the style's colour), title, artist, label, style and year; a click plays it */
+/**
+ * A shared track as a card: cover, title, artist, style; a click flies there and plays it. Drawn from
+ * the message itself (new shares carry "♪ title — artist" before the link) and the YouTube cover, so the
+ * chat never has to load the tracks of every style it mentions; older shares are looked up, one star at
+ * a time, only while COMMS is open — or if their star is loaded already.
+ */
 function signalCard(text: string) {
-  const sig = parseSignal(text)!, said = withoutSignal(text), r = placed(sig);
-  const before = said ? `<span class="m-t">${esc(said)}</span>` : "";
-  if (r === undefined) { awaitSignal(sig); return `${before}<div class="sig-card wait">TUNING IN TO A SIGNAL…</div>`; }
-  const ch = r && chunk(r.s);
-  if (!r || !ch) return `${before}<div class="sig-card wait">THIS SIGNAL IS NOT ON THE MAP ANY MORE</div>`;
-  const st = galaxy.stars[r.s], pi = ch.p[r.i], label = pi >= 0 ? galaxy.planets[pi].name : "ASTEROID BELT", yt = ch.yt[r.i];
-  return `${before}<button type="button" class="sig-card" data-sig="${r.s}.${r.i}" style="--acc:${st.color}" title="Fly there and play it">
-    <span class="frame thumb sig-th"><img alt="" src="https://i.ytimg.com/vi/${esc(yt)}/default.jpg" referrerpolicy="no-referrer"><span class="raster"></span></span>
-    <span class="sig-i"><b>${esc(ch.t[r.i])}</b><span>${esc(ch.an[ch.a[r.i]])}</span><i>${esc(label.toUpperCase())} · ${esc(st.name.toUpperCase())}${ch.yr[r.i] ? ` · ${ch.yr[r.i]}` : ""}</i></span>
+  const sig = parseSignal(text)!, said = withoutSignal(text), st = galaxy.stars[galaxy.starIndex(sig.star)];
+  const meta = said.match(/^♪\s*(.+?)(?:\s+—\s+(.+))?$/);
+  let title = meta?.[1] ?? "", artist = meta?.[2] ?? "", extra = "";
+  const before = said && !meta ? `<span class="m-t">${esc(said)}</span>` : "";
+  if (!title) {
+    const r = placed(sig), ch = r && chunk(r.s);
+    if (r && ch) { title = ch.t[r.i]; artist = ch.an[ch.a[r.i]]; const pi = ch.p[r.i]; extra = `${pi >= 0 ? galaxy.planets[pi].name : "ASTEROID BELT"}`; }
+    else if (r === undefined && seen()) awaitSignal(sig);
+    else if (r === null) return `${before}<div class="sig-card wait">THIS SIGNAL IS NOT ON THE MAP ANY MORE</div>`;
+  }
+  return `${before}<button type="button" class="sig-card" data-sigh="${esc(`${sig.yt}.${sig.star}`)}" style="--acc:${st?.color ?? "var(--ink)"}" title="Fly there and play it">
+    <span class="frame thumb sig-th"><img alt="" src="https://i.ytimg.com/vi/${esc(sig.yt)}/default.jpg" referrerpolicy="no-referrer"><span class="raster"></span></span>
+    <span class="sig-i"><b>${esc(title || "A shared signal")}</b><span>${esc(artist)}</span><i>${extra ? `${esc(extra.toUpperCase())} · ` : ""}${esc(sig.star.toUpperCase())}</i></span>
     <span class="sig-go">▶</span></button>`;
 }
 /** a message's text; a shared track or an invite to a fleet becomes a card */
@@ -224,8 +233,12 @@ async function act(e: Event) {
   if (t.closest("[data-unreply]")) { replyTo = null; paint(); return; }
   const go = t.closest<HTMLElement>("[data-goto]");
   if (go) { const el = document.querySelector<HTMLElement>(`#commsList [data-mid="${go.dataset.goto}"]`); el?.scrollIntoView({ block: "center", behavior: "smooth" }); el?.classList.add("flash"); setTimeout(() => el?.classList.remove("flash"), 1200); return; }
-  const sg = t.closest<HTMLElement>("[data-sig]");
-  if (sg) { const [s, i] = sg.dataset.sig!.split(".").map(Number); select({ kind: "track", s, i }, true, true); return; }
+  const sg = t.closest<HTMLElement>("[data-sigh]");
+  if (sg) {
+    const [yt, ...rest] = sg.dataset.sigh!.split("."), r = await find({ yt, star: rest.join(".") });
+    if (r) select({ kind: "track", ...r }, true, true); else flashKey(sg, "NOT ON THE MAP");
+    return;
+  }
   const j = t.closest<HTMLElement>("[data-join]"); if (j) { if (!beta.open) { ui.locked(-1); return; } await tuneIn(j.dataset.join!); return; }
   if (t.closest("[data-leave]")) { await leave(); return; }
   const cp = t.closest<HTMLElement>("[data-fl-copy]"); if (cp) { if (await copyInvite()) flashKey(cp, "COPIED ✓"); return; }
@@ -245,7 +258,7 @@ async function act(e: Event) {
 
 /** opening the tab: the latest messages in view (the list can't scroll while it's hidden) */
 const toEnd = () => requestAnimationFrame(() => { const el = $("commsList"); el.scrollTop = el.scrollHeight; });
-export const openComms = () => { start(); watchOnAir().catch(() => {}); unread = 0; paintUnread(); paint(); toEnd(); };
+export const openComms = () => { asked.clear(); start(); watchOnAir().catch(() => {}); unread = 0; paintUnread(); paint(); toEnd(); };
 
 export function initComms() {
   $("commsForm").onsubmit = (e) => { e.preventDefault(); send(); };

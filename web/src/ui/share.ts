@@ -1,7 +1,7 @@
 // Sharing a track: its stable link copied, or sent to the open COMMS channel (ALL), where it shows as
 // a card. From the player (the track on air) and from a track's dossier.
 import { $ } from "../core/dom";
-import { state } from "../app/state";
+import { chunk, state } from "../app/state";
 import { signalLink } from "../app/signal";
 import { ALL, transmit } from "../cloud/comms";
 import { pilot } from "../cloud/pilots";
@@ -19,7 +19,9 @@ export async function shareTrack(o: { s: number; i: number }, how: "copy" | "sen
   if (!pilot.me) { openPilot(); return false; }
   if (!beta.open) { flashKey(key ?? null, "✕ NEEDS ACCESS"); say("Closed beta: COMMS opens once you have access", "err"); return false; }
   if (key) { key.dataset.label ??= key.innerHTML; key.textContent = "SENDING…"; }
-  const e = await transmit(ALL, link);
+  // the card is drawn from the message itself: title and artist travel with the link
+  const ch = chunk(o.s), said = ch ? `♪ ${ch.t[o.i]}${ch.an[ch.a[o.i]] ? ` — ${ch.an[ch.a[o.i]]}` : ""}`.slice(0, 200) : "";
+  const e = await transmit(ALL, said ? `${said}\n${link}` : link);
   if (key?.dataset.label) { key.innerHTML = key.dataset.label; delete key.dataset.label; }
   if (e) { flashKey(key ?? null, "✕ NOT SENT"); say(e === "too-fast" ? "Too fast. One message every few seconds" : "Couldn't send it. Try again", "err"); return false; }
   flashKey(key ?? null, "SENT TO COMMS ✓"); say("Sent to COMMS · ALL: everyone sees it as a card"); return true;
