@@ -26,9 +26,18 @@ export const viewportEl = () => vp;
 /** run fn(now) every frame after drawing (dossier animations etc.) */
 export const onFrame = (fn: (t: number) => void) => { perFrame.push(fn); };
 
+// Map resolution: at most 1.5 pixels per CSS pixel (a Retina screen at 2× paints almost twice as many),
+// and lower still if frames keep running long — the pixel look survives it, the laptop's fan thanks us.
+let quality = Math.min(1.5, devicePixelRatio || 1);
+const slow: number[] = [];
+function watchFrame(dt: number) {
+  slow.push(dt); if (slow.length < 90) return;
+  const avg = slow.reduce((a, b) => a + b, 0) / slow.length; slow.length = 0;
+  if (avg > 30 && quality > 1) { quality = Math.max(1, quality - 0.25); resize(); }
+}
 function resize() {
   // sizes in the page's own px; DPR counts the page zoom so the canvases stay pixel-sharp
-  const r = vp.getBoundingClientRect(), z = uiZoom(vp), dpr = Math.min(2, devicePixelRatio || 1) * z;
+  const r = vp.getBoundingClientRect(), z = uiZoom(vp), dpr = quality * z;
   cam.W = Math.max(1, r.width / z); cam.H = Math.max(1, r.height / z); cam.DPR = dpr;
   cv.width = cam.W * dpr; cv.height = cam.H * dpr;
   layerRes = 0; setLayerRes(dpr);
@@ -133,6 +142,7 @@ function frame(now: number) {
   const busy = cam.flying || state.warping || state.dirty || now - lastInput < 1500;
   const gap = busy ? 0 : now - lastInput < 20000 ? 66 : 125;
   if (gap && now - lastDrawn < gap) { requestAnimationFrame(frame); return; }
+  if (!gap && lastDrawn && now - lastDrawn < 200) watchFrame(now - lastDrawn); // only full-speed frames count
   lastDrawn = now;
   motion.now = now;
   // a flight doesn't repaint the background every frame (the costliest thing we draw): drawLive slides
