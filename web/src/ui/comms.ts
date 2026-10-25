@@ -33,11 +33,21 @@ function nameTag(p: { nick?: string; rank?: string } | undefined) {
   const k = rankOf(p?.rank);
   return `${rankTag(p?.rank)}<b${k.color ? ` style="color:${k.color}"` : ""}>${esc((p?.nick ?? "PILOT").toUpperCase())}</b>`;
 }
+// Each shared track still being looked up asks for ONE repaint when it's found, and repaints are batched
+// into one per frame. (Asking on every paint made each paint ask again: the repaints multiplied until
+// the page froze.)
+const asked = new Set<string>();
+let repaint = 0;
+const paintSoon = () => { if (!repaint) repaint = requestAnimationFrame(() => { repaint = 0; paint(); }); };
+function awaitSignal(sig: { yt: string; star: string }) {
+  const k = `${sig.yt}.${sig.star}`; if (asked.has(k)) return; asked.add(k);
+  find(sig).then(paintSoon, paintSoon);
+}
 /** a shared track: its cover (in the style's colour), title, artist, label, style and year; a click plays it */
 function signalCard(text: string) {
   const sig = parseSignal(text)!, said = withoutSignal(text), r = placed(sig);
   const before = said ? `<span class="m-t">${esc(said)}</span>` : "";
-  if (r === undefined) { find(sig).then(() => paint()); return `${before}<div class="sig-card wait">TUNING IN TO A SIGNAL…</div>`; }
+  if (r === undefined) { awaitSignal(sig); return `${before}<div class="sig-card wait">TUNING IN TO A SIGNAL…</div>`; }
   const ch = r && chunk(r.s);
   if (!r || !ch) return `${before}<div class="sig-card wait">THIS SIGNAL IS NOT ON THE MAP ANY MORE</div>`;
   const st = galaxy.stars[r.s], pi = ch.p[r.i], label = pi >= 0 ? galaxy.planets[pi].name : "ASTEROID BELT", yt = ch.yt[r.i];
@@ -57,7 +67,7 @@ function body(text: string, nick?: string) {
 /** an invite to a fleet: the host, and — while they're on air — what's playing and who's aboard */
 function fleetCard(hostId: string, nick?: string) {
   const live = fleet.hosts.find((h) => h.id === hostId), p = roster.get(hostId) ?? (live && known(live));
-  if (!p && !looked.has(hostId)) { looked.add(hostId); lookup([hostId]).then(() => paint()).catch(() => {}); }
+  if (!p && !looked.has(hostId)) { looked.add(hostId); lookup([hostId]).then(paintSoon).catch(() => {}); }
   const name = esc((p?.nick ?? nick ?? "A PILOT").toUpperCase()), k = rankOf(p?.rank), aboard = fleet.role === "crew" && fleet.hostId === hostId, self = hostId === pilot.me?.id;
   const head = `<span class="fc-h"><span class="fc-lamp${live ? " on" : ""}">${live ? "● LIVE" : "○ OFF AIR"}</span><b${k.color ? ` style="color:${k.color}"` : ""}>${name}</b><span class="fc-k">FLEET</span></span>`;
   if (!live) return `<div class="fleet-card off">${avatarSvg(p?.avatar ?? 0, 40)}<span class="fc-i">${head}<span class="fc-t">This broadcast has ended. Look for it in ON AIR next time.</span></span></div>`;
