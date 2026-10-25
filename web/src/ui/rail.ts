@@ -7,7 +7,7 @@ import { onModal, topModal } from "./modal";
 
 export type Kind = "ok" | "err" | "info" | "mode" | "live";
 export type Act = { label: string; kbd?: string; run: () => void; hot?: boolean };
-type Item = { kind: Kind; html: string; acts?: Act[]; tag?: string };
+type Item = { kind: Kind; html: string; acts?: Act[]; tag?: string; prio?: number };
 const modes = new Map<string, Item>();
 let flash: Item | null = null, timer = 0, host: HTMLElement | null = null;
 const TAG: Record<Kind, string> = { ok: "✓", err: "!", info: "›", mode: "◆", live: "●" };
@@ -22,7 +22,8 @@ function paintInto(el: HTMLElement, item: Item | null) {
 /** the map's rail keeps the modes (picking, on air); an open card's own rail only says what just happened */
 function render() {
   const map = document.getElementById("rail"), card = topModal()?.querySelector<HTMLElement>(".modal-rail") ?? null;
-  const mode = [...modes.values()].pop() ?? null;
+  // the newest mode shows, unless an older one matters more (prio)
+  const mode = [...modes.values()].reduce<Item | null>((a, m) => (!a || (m.prio ?? 0) >= (a.prio ?? 0) ? m : a), null);
   if (card) { paintInto(card, flash); if (map) paintInto(map, mode); }
   else if (map) paintInto(map, flash ?? mode);
   if (host && host !== card && host.classList.contains("modal-rail")) paintInto(host, null);
@@ -36,8 +37,8 @@ export function say(text: string, kind: "ok" | "err" | "info" = "ok") {
   clearTimeout(timer); timer = window.setTimeout(() => { flash = null; render(); }, kind === "err" ? 4200 : 2800);
 }
 /** a lasting mode with its actions; the same id replaces it, clearMode ends it */
-export function setMode(id: string, html: string, acts: Act[] = [], kind: "mode" | "live" = "mode", tag?: string) {
-  modes.delete(id); modes.set(id, { kind, html, acts, tag }); render();
+export function setMode(id: string, html: string, acts: Act[] = [], kind: "mode" | "live" = "mode", tag?: string, prio = 0) {
+  modes.delete(id); modes.set(id, { kind, html, acts, tag, prio }); render();
 }
 export function clearMode(id: string) { if (modes.delete(id)) render(); }
 

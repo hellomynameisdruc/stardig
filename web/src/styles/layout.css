@@ -96,7 +96,7 @@
   .pilot-btn .ava + span { display: none }
   .pilot-btn { padding: 0 6px }
 }
-@media (prefers-reduced-motion: reduce) { .prompt, .ticker-in { animation: none } }
+:root.still .prompt, :root.still .ticker-in { animation: none }
 
 /* Desktop screens: the whole page a little smaller, as it reads best (80% on laptops, 90% on big
    monitors where text would get too fine). The YouTube player grows to match (see player.css). */

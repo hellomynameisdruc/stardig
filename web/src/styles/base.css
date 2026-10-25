@@ -32,7 +32,7 @@ input[type="search"], input[type="text"], input[type="email"], textarea { cursor
 .inv { background: var(--ink); color: var(--inv-ink); text-shadow: none; font-family: var(--f-dot); font-size: var(--fs-xl); padding: 2px 8px 1px; letter-spacing: .08em; box-shadow: var(--glow) }
 .note { font-size: var(--fs-s); color: var(--dim); line-height: 1.6; margin: 0 }
 
-@media (prefers-reduced-motion: reduce) { body::after { animation: none } }
+:root.still body::after { animation: none }
 /* the wordmark on its plate: pixel letters, no font */
 .inv.logo { display: inline-flex; align-items: center; padding: 4px 8px; line-height: 0 }
 .logo { gap: .45em } .logo-mark { display: block; flex: none } .logo-word { font-family: var(--f-mono); font-weight: 400; letter-spacing: .08em; line-height: 1 }

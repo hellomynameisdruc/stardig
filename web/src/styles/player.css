@@ -88,4 +88,4 @@
   body.docked .side { display: none }
   body.docked .deck { grid-template-rows: minmax(0, 1fr) }
 }
-@media (prefers-reduced-motion: reduce) { .dock-ody, #dockCast.on { animation: none } }
+:root.still .dock-ody, :root.still #dockCast.on { animation: none }
