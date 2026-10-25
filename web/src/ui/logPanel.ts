@@ -24,9 +24,12 @@ async function locate(e: { s: number; i: number; b?: string; y?: string; st?: st
 // The log and the beacons are drawn from what they saved (title, artist, style), never by loading the
 // stars' track files: a long log across many styles would load them all, freezing the page and filling
 // memory. A track is found on the map only when it's clicked.
+// The log on screen is this visit's: it starts empty each time the page opens (what was played before
+// still counts towards the flights total and the ranks).
+const visitStart = Date.now();
 let logRefs: ReturnType<typeof flightLog.refs> = [];
 export function renderLog() {
-  const el = $("log"); logRefs = flightLog.refs();
+  const el = $("log"); logRefs = flightLog.refs().filter((r) => r.t >= visitStart);
   el.innerHTML = logRefs.length
     ? logRefs.map((r, k) => {
       // older entries saved no title: use it if their star happens to be loaded already
@@ -35,7 +38,7 @@ export function renderLog() {
       const title = r.ti ?? (i >= 0 ? ch!.t[i] : "Signal"), artist = r.ar ?? (i >= 0 ? ch!.an[ch!.a[i]] : ""), style = r.st ?? galaxy.stars[r.s]?.name ?? "";
       return `<button data-log="${k}"><time>${pad(d.getHours(), 2)}:${pad(d.getMinutes(), 2)}</time><span title="${esc(artist ? `${artist} — ${title}` : title)}">▸ ${esc(title)} · ${esc(style.toUpperCase())}</span></button>`;
     }).join("")
-    : `<p class="note">NO ENTRIES YET. SIGNALS YOU PLAY WILL SHOW UP HERE.</p>`;
+    : `<p class="note">NOTHING PLAYED ON THIS FLIGHT YET. SIGNALS YOU PLAY WILL SHOW UP HERE.</p>`;
 }
 
 export function renderBeacons() {

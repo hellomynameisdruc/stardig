@@ -7,6 +7,9 @@ import { lookup, roster } from "./pilots";
 
 export const ALL = "all";
 const KEEP = 80;
+/** COMMS shows the last day: older messages aren't loaded, and drop off while the page stays open */
+export const HISTORY_MS = 24 * 3600 * 1000;
+const since = () => new Date(Date.now() - HISTORY_MS).toISOString();
 /** reply_to: the message this one answers */
 export type Msg = { id: number; pilot: string; body: string; created_at: string; room?: string; reply_to?: number | null };
 /** the message columns to read; without replies if the database hasn't got them yet */
@@ -49,7 +52,11 @@ const listeners: ((c: Change) => void)[] = [];
 export const onComms = (f: (c: Change) => void) => { listeners.push(f); };
 const emit = (c: Change) => listeners.forEach((f) => f(c));
 
-export const messages = (room: string | null): readonly Msg[] => (room ? rooms.get(room) ?? [] : []);
+export const messages = (room: string | null): readonly Msg[] => {
+  const l = room ? rooms.get(room) : null; if (!l) return [];
+  const cut = Date.now() - HISTORY_MS; while (l.length && Date.parse(l[0].created_at) < cut) l.shift(); // the day has passed
+  return l;
+};
 const bucket = (r: string) => { let l = rooms.get(r); if (!l) rooms.set(r, (l = [])); return l; };
 function add(m: Msg) {
   const l = bucket(m.room!); if (l.some((x) => x.id === m.id)) return false;
@@ -60,8 +67,8 @@ function add(m: Msg) {
 export async function loadRoom(r: string) {
   if (loaded.has(r)) return true; loaded.add(r);
   const sb = await cloud();
-  let { data, error } = await sb.from("messages").select(MCOLS).eq("room", r).order("created_at", { ascending: false }).limit(KEEP);
-  if (error && dropReplies(error.message)) ({ data, error } = await sb.from("messages").select(MCOLS).eq("room", r).order("created_at", { ascending: false }).limit(KEEP));
+  let { data, error } = await sb.from("messages").select(MCOLS).eq("room", r).gte("created_at", since()).order("created_at", { ascending: false }).limit(KEEP);
+  if (error && dropReplies(error.message)) ({ data, error } = await sb.from("messages").select(MCOLS).eq("room", r).gte("created_at", since()).order("created_at", { ascending: false }).limit(KEEP));
   if (error) { loaded.delete(r); return false; }
   await loadReactions(((data ?? []) as unknown as Msg[]).map((m) => m.id)).catch(() => {});
   for (const m of ((data ?? []) as unknown as Msg[]).reverse()) add({ ...m, room: r });

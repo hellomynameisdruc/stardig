@@ -142,7 +142,7 @@ function paint() {
   const invite = fleet.role ? `<div class="fl-inv"><span>INVITE PILOTS</span><button type="button" class="key sm" data-fl-copy>COPY LINK</button><button type="button" class="key sm" data-fl-post>POST TO ALL</button></div>` : "";
   el.innerHTML = view === "air" ? airList()
     : view === "fleet" ? invite + (msgs.length ? msgs.map(line).join("") : `<p class="note">THE FLEET'S OWN CHANNEL. ITS MESSAGES FADE A FEW HOURS ON.</p>`)
-    : msgs.length ? msgs.map(line).join("") : `<p class="note">${started ? "SILENCE ON THE CHANNEL. SAY HELLO." : "TUNING IN…"}</p>`;
+    : msgs.length ? msgs.map(line).join("") : `<p class="note">${started ? "SILENCE ON THE CHANNEL FOR A DAY. SAY HELLO." : "TUNING IN…"}</p>`;
   if (atEnd && view !== "air") el.scrollTop = el.scrollHeight;
   for (const b of document.querySelectorAll<HTMLElement>("#comms .tabs [data-ch]")) b.setAttribute("aria-selected", String(b.dataset.ch === view));
   $("chFleet").hidden = !fleet.role;
