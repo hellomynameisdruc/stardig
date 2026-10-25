@@ -217,7 +217,7 @@ export function drawStation(ctx: CanvasRenderingContext2D, t: number) {
   }
   const px = Math.max(2, Math.min(3, Math.round(cam.DPR))), sp = render(pl.s, px, theta);
   const grow = p < 1 && !arriving.hop ? 0.55 + 0.45 * easeOut(clamp01(p)) : 1; // it comes from far away: a touch smaller at first
-  const scale = Math.min(0.85, 0.5 + (cam.s - LOD_TRACKS) * 0.08) * grow, w = (sp.width / cam.DPR) * scale, h = (sp.height / cam.DPR) * scale;
+  const scale = Math.min(0.85, 0.5 + (cam.s - LOD_TRACKS) * 0.08) * grow, w = (sp.width / px) * scale, h = (sp.height / px) * scale; // one cell = one CSS px, whatever the resolution
   ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(sp, Math.round(x - w / 2), Math.round(y - h / 2), w, h); ctx.restore();
   // orbit insertion: a pulse rings out as the engines cut
   if (p >= 1 && after < 1) {
