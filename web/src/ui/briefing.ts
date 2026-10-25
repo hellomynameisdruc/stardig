@@ -29,7 +29,7 @@ const PANELS: { t: string; p: string; d: string }[] = [
       ${r(28, 9, 20, 2)}${r(28, 14, 14, 1, 0.6)}${r(28, 18, 17, 1, 0.45)}
       ${r(28, 22, 13, 4, 0.9)}${r(29, 23, 1, 2, 0.2)}${r(31, 23, 9, 2, 0.2)}
       ${[[51, 22], [50, 23], [51, 23], [52, 23], [51, 24]].map(([x, y]) => r(x, y, 1, 1)).join("")}`),
-    d: "Sign in with Google or a link sent to your email. You get a call sign and a portrait drawn from traits; ranks are given by the founder. Your beacons and flight log come along on every device.",
+    d: "Sign in with Google or a link sent to your email. You get a call sign and a portrait drawn from traits; you climb the ranks by digging (tracks played, ore mined); DJ, DIGGER and WARDEN are given by hand. Your beacons and flight log come along on every device.",
   },
   {
     t: "FASTEN YOUR SCROLL WHEEL",

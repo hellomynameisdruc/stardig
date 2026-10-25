@@ -4,12 +4,12 @@
 import { esc } from "../core/util";
 import { $ } from "../core/dom";
 import { beacons, ore } from "../app/state";
-import { flightsTotal } from "../cloud/sync";
+import { flightsTotal, onPromoted } from "../cloud/sync";
 import { cloudWanted } from "../cloud/client";
 import { deleteAccount, newPortrait, onPilot, onSignInReturn, pilot, redeemInvite, sendSignInLink, setNick, signInGoogle, signOut, wake } from "../cloud/pilots";
 import { beta, openName } from "../app/beta";
 import { avatarSvg, avatarTraits } from "./avatar";
-import { rankTag } from "./ranks";
+import { EARNED, rankTag, RANKS } from "./ranks";
 import { say } from "./rail";
 import { closeModal, openModal } from "./modal";
 
@@ -22,6 +22,15 @@ function paintButton() {
   b.title = me ? "Your pilot profile" : "Sign in to chat in COMMS";
 }
 
+/** the next earned rank and how far off it is */
+function nextRank(rank?: string) {
+  const at = EARNED.findIndex((e) => e.rank === rank);
+  if (rank && rank !== "cadet" && at < 0) return ""; // a given rank
+  const nx = EARNED[at + 1]; if (!nx) return `<p class="pl-small">TOP OF THE LADDER. RESPECT.</p>`;
+  const f = flightsTotal(), o = ore.size, k = Math.min(1, Math.max(f / nx.flights, o / nx.ore));
+  return `<div class="pl-next"><span>NEXT: <b style="color:${RANKS[nx.rank].color}">${RANKS[nx.rank].badge} ${RANKS[nx.rank].label}</b> · ${f}/${nx.flights} FLIGHTS OR ${o}/${nx.ore} ORE</span><i style="--k:${(k * 100).toFixed(0)}%"></i></div>`;
+}
+
 function body() {
   const me = pilot.me;
   if (me) return `<div class="pl-id">${avatarSvg(me.avatar, 96, "ava big")}
@@ -31,6 +40,7 @@ function body() {
         <button type="button" class="key" id="plFace">↻ NEW PORTRAIT</button>
         <p class="pl-traits">${avatarTraits(me.avatar).map((t) => esc(t.toUpperCase())).join(" · ")}</p>
       </div></div>
+    ${nextRank(me.rank)}
     <dl class="pl-stats"><dt>BEACONS</dt><dd>${beacons.size}</dd><dt>FLIGHTS LOGGED</dt><dd>${flightsTotal()}</dd><dt>ORE MINED</dt><dd>${ore.size}</dd>${beta.on ? `<dt>ACCESS</dt><dd>${me.access || me.admin ? "OPEN" : "WAITING"}</dd>` : ""}<dt>EMAIL</dt><dd>${esc(pilot.session?.user.email ?? "")}</dd></dl>
     ${beta.on && !me.access && !me.admin ? `<div class="pl-beta"><p class="pl-text">CLOSED BETA · WAITING FOR ACCESS</p>
       <p class="pl-small">${esc(openName())} is open to everyone. The rest of the map, COMMS and broadcasting open once the founder lets you in, or with an invite code:</p>
@@ -119,6 +129,7 @@ export const pilotOpen = () => !$("pilotBox").hidden;
 export function initPilot() {
   paintButton();
   onPilot(() => { paintButton(); if (pilotOpen()) render(); });
+  onPromoted((r) => say(`Promoted: you're ${RANKS[r]?.label ?? r.toUpperCase()} now`));
   onSignInReturn((failure) => {
     if (!failure) { say(`Signed in. Welcome aboard, ${pilot.me?.nick ?? "pilot"}`); return; }
     note = failure === "no-session" ? "SIGN-IN FAILED. OPEN THE LINK IN THE SAME BROWSER YOU ASKED FOR IT IN, OR ASK FOR A NEW ONE." : `SIGN-IN FAILED: ${failure}`.toUpperCase();

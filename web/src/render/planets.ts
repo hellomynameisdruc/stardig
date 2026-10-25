@@ -11,19 +11,21 @@ import { hudFits } from "./markers";
 // Planets drawn every frame (the one you are at, turning; or one too big for a sprite) keep their
 // painted surface and repaint it only when it has turned by one column of its map, or its size moved
 // to another step. slot: 0 the map, 1 the dossier (one planet can be in both at different sizes).
-const live = new Map<number, { c: HTMLCanvasElement; D: number; q: number; fine: boolean }>();
-const stepD = (D: number) => Math.min(MAX_CELLS, Math.round(Math.pow(2, Math.round(Math.log2(D) * 5) / 5)));
+const live = new Map<number, { c: HTMLCanvasElement; D: number; q: number; fine: boolean; at: number }>();
+const stepD = (D: number) => Math.min(200, Math.round(Math.pow(2, Math.round(Math.log2(D) * 5) / 5)));
 function liveSurface(i: number, D: number, spin: number, slot: number) {
   const step = (Math.PI * 2) / texW(D), q = Math.round(spin / step), id = i * 2 + slot;
   let e = live.get(id);
   const fine = texReady(galaxy.planets[i].name, galaxy.ptype[i], texW(D));
   if (e && e.q === q && e.D === D && e.fine === fine) return e.c;
   if (e && e.D && performance.now() - frameT0 > SPRITE_BUDGET) return e.c; // over this frame's budget: as it was, scaled
+  // turning: a new picture at most ~12 times a second (each is a full repaint of the surface)
+  if (e && e.D === D && e.fine === fine && performance.now() - e.at < 80) return e.c;
   const pl = galaxy.planets[i], src = surface(pl.name, galaxy.ptype[i], pl.s, D, q * step);
-  if (!e) { if (live.size > 8) live.delete(live.keys().next().value!); e = { c: document.createElement("canvas"), D: 0, q: 0, fine: false }; live.set(id, e); }
+  if (!e) { if (live.size > 8) live.delete(live.keys().next().value!); e = { c: document.createElement("canvas"), D: 0, q: 0, fine: false, at: 0 }; live.set(id, e); }
   if (e.c.width !== D || e.c.height !== D) { e.c.width = D; e.c.height = D; } // a new canvas is 300×150: check both
   const g = e.c.getContext("2d")!; g.clearRect(0, 0, D, D); g.drawImage(src, 0, 0);
-  e.D = D; e.q = q; e.fine = fine;
+  e.D = D; e.q = q; e.fine = fine; e.at = performance.now();
   return e.c;
 }
 /** forget painted surfaces (after the colours change) */

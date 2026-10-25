@@ -15,7 +15,7 @@ import { select } from "../app/actions";
 import { find, parseSignal, placed, withoutSignal } from "../app/signal";
 import { avatarSvg } from "./avatar";
 import { openPilot } from "./pilot";
-import { isStaff, rankKey, rankOf, rankTag, RANKS } from "./ranks";
+import { EARNED, GIVEN, isStaff, rankKey, rankOf, rankTag, RANKS } from "./ranks";
 import { flashKey, say } from "./rail";
 import { copyInvite } from "./fleet";
 import { ICON } from "./dock";
@@ -176,7 +176,7 @@ async function send() {
 /** the console: /ranks lists them; /rank CALLSIGN RANK (the founder) gives one */
 async function command(text: string) {
   const inp = $<HTMLInputElement>("commsIn"), [cmd, nick, ...rest] = text.slice(1).trim().split(/\s+/);
-  if (cmd === "ranks" || cmd === "help") { inp.value = ""; tell(`Ranks: ${Object.keys(RANKS).join(" · ")}. Give one: /rank CALLSIGN RANK. Closed beta: /waiting · /approve CALLSIGN · /revoke CALLSIGN · /invite [PILOTS]`, "info"); return; }
+  if (cmd === "ranks" || cmd === "help") { inp.value = ""; tell(`Earned by digging: ${EARNED.map((e) => RANKS[e.rank].label).join(" › ")}. Given by the founder: ${GIVEN.map((k) => RANKS[k].label).join(" · ")} (/rank CALLSIGN RANK). Closed beta: /waiting · /approve CALLSIGN · /revoke CALLSIGN · /invite [PILOTS]`, "info"); return; }
   // the closed beta (the founder): let a pilot in or out, make an invite code
   if (cmd === "waiting") { inp.value = ""; await showWaiting(); return; }
   if (cmd === "approve" || cmd === "revoke") {
@@ -193,8 +193,9 @@ async function command(text: string) {
   }
   if (cmd !== "rank" || !nick || !rest.length) { tell("Unknown command. Try /ranks"); return; }
   const r = rankKey(rest.join(" ")); if (!r) { tell(`No such rank. ${Object.keys(RANKS).join(" · ")}`); return; }
+  if (r === "founder") { tell("ARCHITECT is yours alone: it's not given to anyone"); return; }
   const res = await grantRank(nick, r);
-  if ("error" in res) { tell(res.error === "not-authorised" ? "Only the founder gives ranks" : res.error === "no-such-pilot" ? `No pilot called ${nick}` : `Failed: ${res.error}`); return; }
+  if ("error" in res) { tell(res.error === "not-authorised" ? "Only the founder gives ranks" : res.error === "no-such-pilot" ? `No pilot called ${nick} (or it's you)` : `Failed: ${res.error}`); return; }
   inp.value = ""; note = null; paint(); say(`${res.nick} is now ${RANKS[r].label}`);
 }
 
@@ -232,7 +233,9 @@ async function act(e: Event) {
   if (rep && (await report(+rep.dataset.rep!))) { reported.add(+rep.dataset.rep!); paint(); say("Reported. Thank you, pilot"); }
 }
 
-export const openComms = () => { start(); watchOnAir().catch(() => {}); unread = 0; paintUnread(); paint(); };
+/** opening the tab: the latest messages in view (the list can't scroll while it's hidden) */
+const toEnd = () => requestAnimationFrame(() => { const el = $("commsList"); el.scrollTop = el.scrollHeight; });
+export const openComms = () => { start(); watchOnAir().catch(() => {}); unread = 0; paintUnread(); paint(); toEnd(); };
 
 export function initComms() {
   $("commsForm").onsubmit = (e) => { e.preventDefault(); send(); };
@@ -244,6 +247,8 @@ export function initComms() {
   onComms((c) => {
     if (c.kind === "new" && c.msg.pilot !== pilot.me?.id && !seen()) { unread++; paintUnread(); }
     if (started || !$("comms").hidden) paint();
+    if (c.kind === "loaded") toEnd();
+    if (c.kind === "loaded") toEnd();
   });
   // joining a fleet opens its room; leaving falls back to ALL
   let was: string | null = null;

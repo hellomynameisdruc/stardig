@@ -53,3 +53,6 @@ body.modal-open .dock { border-color: var(--faint); box-shadow: none }
 .pl-beta { display: flex; flex-direction: column; gap: 8px; border: 1px dashed var(--line); padding: 10px }
 .pl-betanote { text-align: center }
 .play.beta-lock { opacity: .85 }
+.pl-next { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-xs); color: var(--dim); letter-spacing: .06em }
+.pl-next b { font-weight: 400 }
+.pl-next i { display: block; height: 4px; border: 1px solid var(--line); background: linear-gradient(90deg, var(--ink) var(--k), transparent var(--k)) }

@@ -8,7 +8,7 @@ import type { Beacon } from "../store/beacons";
 import type { LogEntry } from "../store/flightLog";
 import { browserKV, readJSON } from "../store/storage";
 import { cloud } from "./client";
-import { onPilot, pilot } from "./pilots";
+import { onPilot, pilot, pilotChanged } from "./pilots";
 
 const GONE = "kosmos-gone", MAX_GONE = 500, COUNT = "kosmos-flights", DEV = "kosmos-dev";
 let uid: string | null = null, applying = false, timer = 0, ready = false;
@@ -64,7 +64,14 @@ async function push() {
   if (!uid || !ready) return;
   const sb = await cloud();
   await sb.from("logbooks").upsert({ pilot: uid, beacons: beacons.all, gone, flights: { list: flightLog.all, count: counts, ore: ore.all }, updated_at: new Date().toISOString() });
+  // the logbook decides the earned rank: ask the registry whether this pilot has climbed
+  const { data } = await sb.rpc("claim_rank");
+  const me = pilot.me, r = typeof data === "string" ? data : null;
+  if (me && r && r !== me.rank) { me.rank = r; promoted.forEach((f) => f(r)); pilotChanged(); }
 }
+const promoted: ((rank: string) => void)[] = [];
+/** the pilot earned a new rank */
+export const onPromoted = (f: (rank: string) => void) => { promoted.push(f); };
 const later = () => { clearTimeout(timer); timer = window.setTimeout(push, 1500); };
 
 async function pull() {
