@@ -15,6 +15,7 @@ import { decodeDossier, scramble } from "./glitch";
 import { shareTrack } from "./share";
 import { provide } from "../app/ports";
 import { say } from "./rail";
+import { lockDossier } from "./beta";
 
 let dosAnim: ((t: number) => void) | null = null;
 /** objects behind data-r buttons of the current render */
@@ -163,6 +164,7 @@ export function renderDossier() {
   document.querySelector<HTMLElement>(".dossier")!.style.setProperty("--acc", accSi >= 0 ? galaxy.stars[accSi].color : "");
   const v = !o ? sector() : o.kind === "star" ? star(o.s) : o.kind === "planet" ? planet(o.p, o) : track(o);
   d.innerHTML = v.html; d.scrollTop = 0;
+  lockDossier(d); // closed beta
   // all meters of a dossier share one label column, as wide as its longest label
   const labs = d.querySelectorAll<HTMLElement>(".bar-r > span:first-child");
   if (labs.length) { d.style.setProperty("--lbl", "max-content"); const w = Math.max(...[...labs].map((e) => e.scrollWidth)); d.style.setProperty("--lbl", w > 20 ? `${Math.min(w + 2, 170)}px` : ""); }

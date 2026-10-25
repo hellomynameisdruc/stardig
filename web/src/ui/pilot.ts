@@ -6,7 +6,8 @@ import { $ } from "../core/dom";
 import { beacons, ore } from "../app/state";
 import { flightsTotal } from "../cloud/sync";
 import { cloudWanted } from "../cloud/client";
-import { deleteAccount, newPortrait, onPilot, onSignInReturn, pilot, sendSignInLink, setNick, signInGoogle, signOut, wake } from "../cloud/pilots";
+import { deleteAccount, newPortrait, onPilot, onSignInReturn, pilot, redeemInvite, sendSignInLink, setNick, signInGoogle, signOut, wake } from "../cloud/pilots";
+import { beta, openName } from "../app/beta";
 import { avatarSvg, avatarTraits } from "./avatar";
 import { rankTag } from "./ranks";
 import { say } from "./rail";
@@ -30,14 +31,17 @@ function body() {
         <button type="button" class="key" id="plFace">↻ NEW PORTRAIT</button>
         <p class="pl-traits">${avatarTraits(me.avatar).map((t) => esc(t.toUpperCase())).join(" · ")}</p>
       </div></div>
-    <dl class="pl-stats"><dt>BEACONS</dt><dd>${beacons.size}</dd><dt>FLIGHTS LOGGED</dt><dd>${flightsTotal()}</dd><dt>ORE MINED</dt><dd>${ore.size}</dd><dt>EMAIL</dt><dd>${esc(pilot.session?.user.email ?? "")}</dd></dl>
+    <dl class="pl-stats"><dt>BEACONS</dt><dd>${beacons.size}</dd><dt>FLIGHTS LOGGED</dt><dd>${flightsTotal()}</dd><dt>ORE MINED</dt><dd>${ore.size}</dd>${beta.on ? `<dt>ACCESS</dt><dd>${me.access || me.admin ? "OPEN" : "WAITING"}</dd>` : ""}<dt>EMAIL</dt><dd>${esc(pilot.session?.user.email ?? "")}</dd></dl>
+    ${beta.on && !me.access && !me.admin ? `<div class="pl-beta"><p class="pl-text">CLOSED BETA · WAITING FOR ACCESS</p>
+      <p class="pl-small">${esc(openName())} is open to everyone. The rest of the map, COMMS and broadcasting open once the founder lets you in, or with an invite code:</p>
+      <form class="row-in" id="plInv"><input class="field" id="plCode" placeholder="INVITE CODE" maxlength="16" autocomplete="off" spellcheck="false" autocapitalize="characters"><button class="key hot" ${busy ? "disabled" : ""}>ENTER ▸</button></form></div>` : ""}
     <p class="pl-small">Beacons, the flight log and your ore are kept with your account, on every device you sign in on.</p>
     <div class="pl-foot"><button type="button" class="key" id="plOut">SIGN OUT</button>
       <button type="button" class="key danger" id="plDel">${confirmDelete ? "CONFIRM: DELETE FOREVER" : "DELETE ACCOUNT"}</button></div>`;
   if (pilot.session) return `<p class="pl-text">CONNECTING TO THE PILOT REGISTRY…</p>`;
   if (sentTo) return `<p class="pl-text">A SIGN-IN LINK IS ON ITS WAY TO <b>${esc(sentTo)}</b>.</p><p class="pl-small">Open it in this browser. No mail? Check spam, or wait a minute and try again.</p>
     <div class="pl-foot"><button type="button" class="key" id="plAgain">USE ANOTHER EMAIL</button></div>`;
-  return `<button type="button" class="key hot pl-google" id="plGoogle" ${busy ? "disabled" : ""}>${GOOGLE_G}SIGN IN WITH GOOGLE</button>
+  return `${beta.on ? `<p class="pl-small pl-betanote">CLOSED BETA: sign in, then wait for the founder to let you in, or enter an invite code.</p>` : ""}<button type="button" class="key hot pl-google" id="plGoogle" ${busy ? "disabled" : ""}>${GOOGLE_G}SIGN IN WITH GOOGLE</button>
     <p class="pl-or">OR A LINK SENT TO YOUR EMAIL, NO PASSWORD</p>
     <form class="row-in" id="plForm"><input class="field" id="plMail" type="email" required placeholder="you@example.com" autocomplete="email" spellcheck="false"><button class="key hot" ${busy ? "disabled" : ""}>SEND LINK ▸</button></form>`;
 }
@@ -62,6 +66,8 @@ function render() {
   on("plOut", async () => { await signOut(); note = ""; sentTo = ""; say("Signed out"); });
   on("plDel", removeAccount);
   on("plGoogle", google);
+  const inv = document.getElementById("plInv") as HTMLFormElement | null;
+  if (inv) inv.onsubmit = (e) => { e.preventDefault(); invite(); };
   const f = document.getElementById("plForm") as HTMLFormElement | null;
   if (f) f.onsubmit = (e) => { e.preventDefault(); sendLink(); };
   const n = document.getElementById("plNick") as HTMLInputElement | null;
@@ -80,6 +86,13 @@ async function sendLink() {
   const e = await sendSignInLink(mail); busy = false;
   if (e) fail(e.startsWith("busy:") ? `The mail service is busy: ${e.slice(5)}` : `Could not send: ${e}`);
   else { sentTo = mail; render(); }
+}
+async function invite() {
+  const code = ($("plCode") as HTMLInputElement).value.trim(); if (!code || busy) return;
+  busy = true; note = ""; render();
+  const r = await redeemInvite(code); busy = false;
+  if (r === true) { note = ""; render(); say("Access granted. Welcome aboard"); return; }
+  fail(r === false ? "That code doesn't work: used up or mistyped" : `Could not check the code: ${r}`);
 }
 async function saveNick() {
   const me = pilot.me; if (!me) return;

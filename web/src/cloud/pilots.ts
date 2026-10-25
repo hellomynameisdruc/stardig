@@ -4,13 +4,15 @@
 import type { Session } from "@supabase/supabase-js";
 import { cloud } from "./client";
 
-export type Pilot = { id: string; nick: string; avatar: number; rank?: string; admin?: boolean };
+/** access: the closed beta lets this pilot in */
+export type Pilot = { id: string; nick: string; avatar: number; rank?: string; admin?: boolean; access?: boolean };
 export const NICK = /^[A-Za-z0-9_.-]{3,20}$/;
 
 /** the pilot columns to read; without ranks if the database hasn't got them yet */
-let COLS = "id,nick,avatar,rank,admin";
+let COLS = "id,nick,avatar,rank,admin,access";
 export async function readPilots<T>(q: (cols: string) => PromiseLike<{ data: T; error: { message: string } | null }>) {
   let r = await q(COLS);
+  if (r.error && /access/.test(r.error.message) && COLS.endsWith(",access")) { COLS = "id,nick,avatar,rank,admin"; r = await q(COLS); }
   if (r.error && /rank|admin/.test(r.error.message) && COLS !== "id,nick,avatar") { COLS = "id,nick,avatar"; r = await q(COLS); }
   return r;
 }
@@ -87,6 +89,27 @@ export async function newPortrait() {
   if (error) return error.message;
   me.avatar = avatar; pilotChanged(); return null;
 }
+/** an invite code: true if it let this pilot in */
+export async function redeemInvite(code: string): Promise<boolean | string> {
+  const { data, error } = await (await cloud()).rpc("redeem_invite", { code: code.trim() });
+  if (error) return error.message;
+  if (data) { await loadMe(); pilotChanged(); }
+  return !!data;
+}
+/** the founder lets a pilot in (or out): their call sign, or why not */
+export async function grantAccess(nick: string, allow: boolean): Promise<{ nick: string } | { error: string }> {
+  const { data, error } = await (await cloud()).rpc("grant_access", { target: nick, allow });
+  if (error) return { error: /NOT AUTHORISED/.test(error.message) ? "not-authorised" : /NO SUCH PILOT/.test(error.message) ? "no-such-pilot" : error.message };
+  for (const p of roster.values()) if (p.nick.toLowerCase() === nick.toLowerCase()) p.access = allow;
+  return { nick: String(data) };
+}
+/** the founder makes an invite code good for `uses` pilots */
+export async function makeInvite(uses: number): Promise<{ code: string } | { error: string }> {
+  const { data, error } = await (await cloud()).rpc("make_invite", { uses });
+  if (error) return { error: /NOT AUTHORISED/.test(error.message) ? "not-authorised" : error.message };
+  return { code: String(data) };
+}
+
 export async function signOut() {
   await (await cloud()).auth.signOut();
   pilot.session = null; pilot.me = null; pilotChanged();

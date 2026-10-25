@@ -6,6 +6,9 @@ import { endBroadcast, fleet, inviteLink, known, leave, onFleet, onFleetNote, st
 import { ICON } from "./dock";
 import { clearInvites } from "../cloud/comms";
 import { openPilot } from "./pilot";
+import { pilot } from "../cloud/pilots";
+import { beta } from "../app/beta";
+import { ui } from "../app/ports";
 import { clearMode, say, setMode } from "./rail";
 
 /** the broadcast ends, and its invites leave the chat with it */
@@ -31,7 +34,11 @@ function paint() {
 }
 
 export function initFleet() {
-  $("dockCast").onclick = async () => { if (fleet.role === "host") end(); else if (!(await startBroadcast())) openPilot(); };
+  $("dockCast").onclick = async () => {
+    if (fleet.role === "host") { end(); return; }
+    if (pilot.me && !beta.open) { ui.locked(-1); return; } // closed beta: broadcasting needs access
+    if (!(await startBroadcast())) openPilot();
+  };
   onFleet(paint);
   onFleetNote(say);
   startFleets();

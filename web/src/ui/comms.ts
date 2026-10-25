@@ -1,11 +1,14 @@
 // The COMMS panel: three channels in the panel under the dossier — ALL (the open channel), FLEET (the
 // fleet you're in, while you're in one) and ON AIR (broadcasts to tune in to). New messages count up on
-// the tab while it's closed. Commands start with "/": /ranks, and the founder's /rank CALLSIGN RANK.
+// the tab while it's closed. Commands start with "/": /ranks, and the founder's /rank CALLSIGN RANK,
+// /approve and /revoke CALLSIGN, /invite [PILOTS] (the closed beta).
 // The messages themselves live in cloud/comms.ts, the fleets in cloud/fleet.ts.
 import { esc, pad } from "../core/util";
 import { $ } from "../core/dom";
 import { ALL, clearInvites, dropRoom, goLive, grantRank, loadRoom, messages, onComms, remove, report, transmit, type Msg } from "../cloud/comms";
-import { lookup, onPilot, pilot, roster, wake } from "../cloud/pilots";
+import { grantAccess, lookup, makeInvite, onPilot, pilot, roster, wake } from "../cloud/pilots";
+import { beta } from "../app/beta";
+import { ui } from "../app/ports";
 import { fleet, fleetRoom, inviteLink, known, leave, onFleet, tuneIn, watchOnAir } from "../cloud/fleet";
 import { chunk, galaxy } from "../app/state";
 import { select } from "../app/actions";
@@ -118,6 +121,7 @@ async function send() {
   if (!pilot.me) { openPilot(); return; }
   if (!text || !r) return;
   if (text.startsWith("/")) { await command(text); return; }
+  if (!beta.open) { tell("Closed beta: COMMS opens once you have access. Enter an invite in your pilot card"); return; }
   inp.disabled = true;
   const e = await transmit(r, text);
   inp.disabled = false; inp.focus();
@@ -128,7 +132,20 @@ async function send() {
 /** the console: /ranks lists them; /rank CALLSIGN RANK (the founder) gives one */
 async function command(text: string) {
   const inp = $<HTMLInputElement>("commsIn"), [cmd, nick, ...rest] = text.slice(1).trim().split(/\s+/);
-  if (cmd === "ranks" || cmd === "help") { inp.value = ""; tell(`Ranks: ${Object.keys(RANKS).join(" · ")}. Give one: /rank CALLSIGN RANK`, "info"); return; }
+  if (cmd === "ranks" || cmd === "help") { inp.value = ""; tell(`Ranks: ${Object.keys(RANKS).join(" · ")}. Give one: /rank CALLSIGN RANK. Closed beta: /approve CALLSIGN · /revoke CALLSIGN · /invite [PILOTS]`, "info"); return; }
+  // the closed beta (the founder): let a pilot in or out, make an invite code
+  if (cmd === "approve" || cmd === "revoke") {
+    if (!nick) { tell(`Who? /${cmd} CALLSIGN`); return; }
+    const res = await grantAccess(nick, cmd === "approve");
+    if ("error" in res) { tell(res.error === "not-authorised" ? "Only the founder lets pilots in" : res.error === "no-such-pilot" ? `No pilot called ${nick}` : `Failed: ${res.error}`); return; }
+    inp.value = ""; note = null; paint(); say(cmd === "approve" ? `${res.nick} is in: full access` : `${res.nick} is back to the open galaxy only`); return;
+  }
+  if (cmd === "invite") {
+    const n = Math.max(1, Math.min(1000, parseInt(nick ?? "1", 10) || 1)), res = await makeInvite(n);
+    if ("error" in res) { tell(res.error === "not-authorised" ? "Only the founder makes invites" : `Failed: ${res.error}`); return; }
+    inp.value = ""; await navigator.clipboard.writeText(res.code).catch(() => {});
+    tell(`Invite code ${res.code} · good for ${n} ${n === 1 ? "pilot" : "pilots"} · copied`, "info"); return;
+  }
   if (cmd !== "rank" || !nick || !rest.length) { tell("Unknown command. Try /ranks"); return; }
   const r = rankKey(rest.join(" ")); if (!r) { tell(`No such rank. ${Object.keys(RANKS).join(" · ")}`); return; }
   const res = await grantRank(nick, r);
@@ -140,7 +157,7 @@ async function act(e: Event) {
   const t = e.target as HTMLElement;
   const sg = t.closest<HTMLElement>("[data-sig]");
   if (sg) { const [s, i] = sg.dataset.sig!.split(".").map(Number); select({ kind: "track", s, i }, true, true); return; }
-  const j = t.closest<HTMLElement>("[data-join]"); if (j) { await tuneIn(j.dataset.join!); return; }
+  const j = t.closest<HTMLElement>("[data-join]"); if (j) { if (!beta.open) { ui.locked(-1); return; } await tuneIn(j.dataset.join!); return; }
   if (t.closest("[data-leave]")) { await leave(); return; }
   const cp = t.closest<HTMLElement>("[data-fl-copy]"); if (cp) { if (await copyInvite()) flashKey(cp, "COPIED ✓"); return; }
   if (t.closest("[data-fl-post]")) {

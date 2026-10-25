@@ -9,6 +9,7 @@ import { cam, LOD_PLANETS, LOD_TITLES, LOD_TRACKS, MAX_SCALE } from "../render/c
 import { ui } from "./ports";
 import { signalHash } from "./signal";
 import { adopt } from "./vault";
+import { starOpen } from "./beta";
 import { wormhole } from "../ui/wormhole";
 
 export const trackCode = (s: number, i: number) => `TR-${pad(s, 2)}.${pad(i, 5)}`;
@@ -60,6 +61,7 @@ export function select(o: Sel, go = true, autoplay = false) {
 // ---------- playback ----------
 export function playTrack(ref: TrackRef) {
   if (galaxy.meta.sample) return;
+  if (!starOpen(ref.s)) { ui.locked(ref.s); return; } // closed beta: this galaxy needs access
   const ch = chunk(ref.s)!;
   // a track off the orbiting planet ends the orbit
   if (state.orbit !== null && ch.p[ref.i] !== state.orbit) state.orbit = null;

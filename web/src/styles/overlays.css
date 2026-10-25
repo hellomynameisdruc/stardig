@@ -50,3 +50,6 @@ body.modal-open .dock { border-color: var(--faint); box-shadow: none }
 .pl-google { width: 100%; padding: 9px; gap: 10px }
 .pl-google svg { width: 14px; height: 14px }
 .pl-or { margin: 0; text-align: center; font-family: var(--f-dot); font-size: var(--fs-xs); letter-spacing: .14em; color: var(--dim) }
+.pl-beta { display: flex; flex-direction: column; gap: 8px; border: 1px dashed var(--line); padding: 10px }
+.pl-betanote { text-align: center }
+.play.beta-lock { opacity: .85 }

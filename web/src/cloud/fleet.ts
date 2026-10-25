@@ -14,6 +14,7 @@ import { chunk, galaxy, state, tracks } from "../app/state";
 import { select } from "../app/actions";
 import { ui } from "../app/ports";
 import { rankOf } from "../ui/ranks";
+import { beta } from "../app/beta";
 import { cloud } from "./client";
 import { lookup, pilot, roster } from "./pilots";
 
@@ -131,6 +132,7 @@ export async function endBroadcast() {
 export async function tuneIn(hostId: string) {
   if (fleet.role === "host") await endBroadcast();
   if (pilot.me && hostId === pilot.me.id) return;
+  if (beta.on && pilot.me && !(pilot.me.access || pilot.me.admin)) { say("Closed beta: tuning in needs access. Enter an invite in your pilot card", "err"); return; }
   await board(hostId, "crew");
   if (fleet.role === "crew") say("Tuned in: you hear what the host hears");
 }

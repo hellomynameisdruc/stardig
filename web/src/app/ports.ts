@@ -21,6 +21,8 @@ export const ui = {
   pickDenied: (_star: string) => {},
   /** the header's ticker numbers changed */
   stats: () => {},
+  /** closed beta: tried to play a track of star s without access */
+  locked: (_s: number) => {},
   /** a belt track heard for the first time: the pilot's ore count */
   oreFound: (_n: number) => {},
   /** the player, for fleets that keep players in step */
