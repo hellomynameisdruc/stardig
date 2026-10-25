@@ -8,6 +8,7 @@ import { inView, MARGIN, updateLiveView } from "./view";
 import { labels } from "./labels";
 import { drawPulsar, pulseOf, starSize } from "./pulsar";
 import { drawPlanets, tickSprites } from "./planets";
+import { tickFaces } from "./starSurface";
 import { drawSatellites } from "./satellites";
 import { drawStation } from "./station";
 import { drawRoute } from "./routeLine";
@@ -84,7 +85,7 @@ function drawLive(t: number) {
   labels.reset(); labels.g = ctx;
   drawNames();
   drawRoute(ctx, t);
-  tickSprites(); if (++frameNo % 6 === 0) readout();
+  tickSprites(); tickFaces(); if (++frameNo % 6 === 0) readout();
   drawBelt(ctx, t);
   drawPlanets(ctx, t);
   drawSatellites(ctx, t);

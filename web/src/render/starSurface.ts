@@ -4,7 +4,15 @@ import { hash, lcg } from "../core/util";
 import { BG, SC } from "./palette";
 
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-const cache = new Map<number, { D: number; c: HTMLCanvasElement }>();
+// faces by star and size (the map and the dossier show a star at two sizes at once); oldest dropped
+const cache = new Map<number, HTMLCanvasElement>();
+const MAX_FACES = 260;
+let frameT0 = 0;
+/** the time painting faces may take in one frame; past it a star keeps a face of another size */
+const BUDGET = 3;
+/** call once per frame */
+export const tickFaces = () => { frameT0 = performance.now(); };
+const nearest = new Map<number, number>(); // star → the size of its last painted face
 const seeds = new Map<number, Float32Array>();
 
 /** granule centres on the sphere (unit vectors), more on bigger discs */
@@ -17,10 +25,13 @@ function granules(si: number, name: string, n: number) {
 
 /** the star's disc, D cells across (shared per star: draw it straight away) */
 export function starFace(si: number, name: string, D: number): HTMLCanvasElement {
-  let e = cache.get(si);
-  if (e && e.D === D) return e.c;
-  if (!e) { e = { D: 0, c: document.createElement("canvas") }; cache.set(si, e); }
-  const c = e.c; c.width = c.height = D; e.D = D;
+  const key = si * 1024 + D, have = cache.get(key);
+  if (have) { cache.delete(key); cache.set(key, have); return have; } // most recently used last
+  const old = nearest.get(si), oldC = old !== undefined ? cache.get(si * 1024 + old) : undefined;
+  if (oldC && performance.now() - frameT0 > BUDGET) return oldC; // over budget: the last face, scaled
+  const c = document.createElement("canvas"); c.width = c.height = D;
+  cache.set(key, c); nearest.set(si, D);
+  if (cache.size > MAX_FACES) cache.delete(cache.keys().next().value!);
   const g = c.getContext("2d")!, img = g.createImageData(D, D), d = img.data, R = D / 2, col = SC[si];
   const m = BG.replace("#", ""), bg = [0, 2, 4].map((k) => parseInt(m.slice(k, k + 2), 16) || 0);
   const n = Math.max(18, Math.min(60, Math.round(D * 0.5))), P = granules(si, name, n), id = new Int16Array(D * D).fill(-1);
@@ -44,4 +55,4 @@ export function starFace(si: number, name: string, D: number): HTMLCanvasElement
   return c;
 }
 /** forget painted faces (after the colours change) */
-export const resetStarFaces = () => cache.clear();
+export const resetStarFaces = () => { cache.clear(); nearest.clear(); };

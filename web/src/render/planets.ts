@@ -12,12 +12,13 @@ import { hudFits } from "./markers";
 // painted surface and repaint it only when it has turned by one column of its map, or its size moved
 // to another step. slot: 0 the map, 1 the dossier (one planet can be in both at different sizes).
 const live = new Map<number, { c: HTMLCanvasElement; D: number; q: number; fine: boolean }>();
-const stepD = (D: number) => Math.min(MAX_CELLS, Math.round(Math.pow(2, Math.round(Math.log2(D) * 10) / 10)));
+const stepD = (D: number) => Math.min(MAX_CELLS, Math.round(Math.pow(2, Math.round(Math.log2(D) * 5) / 5)));
 function liveSurface(i: number, D: number, spin: number, slot: number) {
   const step = (Math.PI * 2) / texW(D), q = Math.round(spin / step), id = i * 2 + slot;
   let e = live.get(id);
   const fine = texReady(galaxy.planets[i].name, galaxy.ptype[i], texW(D));
   if (e && e.q === q && e.D === D && e.fine === fine) return e.c;
+  if (e && e.D && performance.now() - frameT0 > SPRITE_BUDGET) return e.c; // over this frame's budget: as it was, scaled
   const pl = galaxy.planets[i], src = surface(pl.name, galaxy.ptype[i], pl.s, D, q * step);
   if (!e) { if (live.size > 8) live.delete(live.keys().next().value!); e = { c: document.createElement("canvas"), D: 0, q: 0, fine: false }; live.set(id, e); }
   if (e.c.width !== D || e.c.height !== D) { e.c.width = D; e.c.height = D; } // a new canvas is 300×150: check both
@@ -57,13 +58,13 @@ export function drawPlanetBody(G: CanvasRenderingContext2D, i: number, x: number
   if (ringed) rings(0, Math.PI, 0.95);
 }
 
-// Planet bodies are cached as sprites at bucketed sizes (~12% steps) and scaled to the exact size,
+// Planet bodies are cached as sprites at bucketed sizes (~19% steps) and scaled to the exact size,
 // so zooming doesn't repaint every planet on every wheel tick. Unused sprites are dropped.
 const pSprite: ({ c: HTMLCanvasElement; rb: number; used: number } | null)[] = galaxy.planets.map(() => null);
 let frameNo = 0, spriteCount = 0, frameT0 = 0;
-const SPRITE_BUDGET = 5; // ms of sprite painting per frame
+const SPRITE_BUDGET = 4; // ms of sprite painting per frame
 function planetSprite(i: number, r: number): { c: HTMLCanvasElement; k: number } | null {
-  const rb = Math.pow(2, Math.round(Math.log2(r) * 6) / 6), DPR = cam.DPR;
+  const rb = Math.pow(2, Math.round(Math.log2(r) * 4) / 4), DPR = cam.DPR; // size steps of ~19%
   let e = pSprite[i];
   // repainting is spread over frames while zooming: past the budget, a planet keeps its old sprite, scaled
   const over = performance.now() - frameT0 > SPRITE_BUDGET;

@@ -59,7 +59,7 @@ export function drawPulsar(c: CanvasRenderingContext2D, si: number, x: number, y
     for (let k = 0; k < nDots; k++) { const a = rot + k * 6.283 / nDots; c.fillRect(Math.round(x + Math.cos(a) * hr - dsz / 2), Math.round(y + Math.sin(a) * hr - dsz / 2), dsz, dsz); }
   }
   // the face: granules, painted at the size step and scaled to the beat
-  const r = s * (1 + 0.1 * p), D = Math.min(200, Math.max(6, Math.round(Math.pow(2, Math.round(Math.log2(s * 2) * 4) / 4))));
+  const r = s * (1 + 0.1 * p), D = Math.min(96, Math.max(6, Math.round(Math.pow(2, Math.round(Math.log2(s * 2) * 3) / 3))));
   const sm = c.imageSmoothingEnabled; c.imageSmoothingEnabled = false;
   c.drawImage(starFace(si, galaxy.stars[si].name, D), x - r, y - r, r * 2, r * 2);
   c.imageSmoothingEnabled = sm;
