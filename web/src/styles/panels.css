@@ -107,3 +107,22 @@
 .chat-foot { justify-content: space-between }
 .chat-page .comms-list { font-size: var(--fs-m) }
 .chat-page .msg .m-t { font-size: var(--fs-m) }
+/* replies and reactions */
+.m-q { display: block; max-width: 100%; margin: 2px 0 4px; padding: 2px 6px; background: none; border: 0; border-left: 2px solid var(--faint); color: var(--dim); font: inherit; font-size: var(--fs-xs); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: var(--cur-hand, pointer) }
+.m-q b { font-weight: 400; color: var(--ink) }
+.m-q:hover { border-left-color: var(--ink) }
+.m-rx { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; min-height: 0 }
+.rx { background: none; border: 1px solid var(--line); color: var(--dim); font: inherit; font-size: var(--fs-xs); padding: 1px 6px; cursor: var(--cur-hand, pointer); font-variant-numeric: tabular-nums }
+.rx.on { border-color: var(--ink); color: var(--ink); background: var(--wash) }
+.rx:hover { color: var(--ink) }
+.m-acts { display: inline-flex; gap: 2px; opacity: 0; transition: opacity .15s }
+.msg:hover .m-acts, .m-acts:focus-within, .msg.replying .m-acts { opacity: 1 }
+@media (hover: none) { .m-acts { opacity: .55 } }
+.rx-k { background: none; border: 0; color: var(--dim); font: inherit; font-size: var(--fs-s); padding: 0 4px; cursor: var(--cur-hand, pointer) }
+.rx-k:hover { color: var(--ink) }
+.rx-k.rp { font-size: var(--fs-xs); letter-spacing: .1em; margin-left: 4px }
+.msg.replying { background: var(--wash) }
+.msg.flash { outline: 1px solid var(--ink); outline-offset: 2px }
+.comms-reply { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px; border: 1px dashed var(--line); font-size: var(--fs-xs); color: var(--dim); min-width: 0 }
+.comms-reply span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0 }
+.comms-reply b { font-weight: 400; color: var(--ink) }

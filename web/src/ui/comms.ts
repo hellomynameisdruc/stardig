@@ -5,7 +5,7 @@
 // The messages themselves live in cloud/comms.ts, the fleets in cloud/fleet.ts.
 import { esc, pad } from "../core/util";
 import { $ } from "../core/dom";
-import { ALL, clearInvites, dropRoom, goLive, grantRank, loadRoom, messages, onComms, remove, report, transmit, type Msg } from "../cloud/comms";
+import { ALL, clearInvites, dropRoom, goLive, grantRank, loadRoom, messageById, messages, onComms, REACTIONS, reactionsOf, remove, report, toggleReaction, transmit, type Msg } from "../cloud/comms";
 import { grantAccess, lookup, makeInvite, onPilot, pilot, roster, waitingPilots, wake } from "../cloud/pilots";
 import { beta } from "../app/beta";
 import { ui } from "../app/ports";
@@ -72,7 +72,41 @@ function line(m: Msg) {
   const act = !pilot.me ? "" : mine || isStaff(pilot.me)
     ? `<button class="m-x" data-del="${m.id}" aria-label="Delete the message" title="Delete">×</button>`
     : `<button class="m-x" data-rep="${m.id}" aria-label="Report this message" title="${reported.has(m.id) ? "Reported" : "Report"}" ${reported.has(m.id) ? "disabled" : ""}>!</button>`;
-  return `<div class="msg${mine ? " mine" : ""}">${avatarSvg(p?.avatar ?? 0, 32)}<div class="m-b"><span class="m-h">${nameTag(p)}<time>${time(m.created_at)}</time>${act}</span>${body(m.body, p?.nick)}</div></div>`;
+  return `<div class="msg${mine ? " mine" : ""}${replyTo === m.id ? " replying" : ""}" data-mid="${m.id}">${avatarSvg(p?.avatar ?? 0, 32)}<div class="m-b"><span class="m-h">${nameTag(p)}<time>${time(m.created_at)}</time>${act}</span>${quote(m)}${body(m.body, p?.nick)}${reactionRow(m)}</div></div>`;
+}
+/** what a message answers: a line quoting it (a click scrolls to it) */
+function quote(m: Msg) {
+  if (!m.reply_to) return "";
+  const q = messageById(m.reply_to), who = q ? roster.get(q.pilot)?.nick ?? "PILOT" : "";
+  return `<button type="button" class="m-q" data-goto="${m.reply_to}">↩ ${q ? `<b>${esc(who.toUpperCase())}</b> ${esc(snippet(q.body))}` : "AN EARLIER MESSAGE"}</button>`;
+}
+/** a message in a few words: a shared track by its title */
+function snippet(text: string) {
+  const sig = parseSignal(text);
+  if (sig) { const r = placed(sig), ch = r && chunk(r.s); if (ch && r) return `♪ ${ch.t[r.i]}`; return "♪ a shared track"; }
+  if (/#fleet-/.test(text)) return "an invite to a fleet";
+  return text.length > 60 ? `${text.slice(0, 60)}…` : text;
+}
+/** the reactions under a message (mine lit), and on hover the keys to react and to reply */
+function reactionRow(m: Msg) {
+  const me = pilot.me?.id, got = reactionsOf(m.id);
+  const chips = Object.entries(REACTIONS).flatMap(([k, r]) => {
+    const who = got?.get(k); if (!who?.size) return [];
+    const names = [...who].map((id) => roster.get(id)?.nick ?? "pilot").join(", ");
+    return [`<button type="button" class="rx${me && who.has(me) ? " on" : ""}" data-rx="${m.id}:${k}" title="${esc(r.name)}: ${esc(names)}">${r.glyph} ${who.size}</button>`];
+  }).join("");
+  const keys = !pilot.me ? "" : `<span class="m-acts">${Object.entries(REACTIONS).map(([k, r]) => `<button type="button" class="rx-k" data-rx="${m.id}:${k}" title="${esc(r.name)}" aria-label="${esc(r.name)}">${r.glyph}</button>`).join("")}<button type="button" class="rx-k rp" data-reply="${m.id}" title="Reply" aria-label="Reply">↩ REPLY</button></span>`;
+  return chips || keys ? `<div class="m-rx">${chips}${keys}</div>` : "";
+}
+let replyTo: number | null = null;
+/** the bar over the input while replying */
+function paintReply() {
+  let bar = document.getElementById("commsReply");
+  if (!bar) { bar = document.createElement("div"); bar.id = "commsReply"; bar.className = "comms-reply"; $("commsForm").before(bar); bar.addEventListener("click", act); }
+  const q = replyTo ? messageById(replyTo) : null;
+  if (!q) { replyTo = null; bar.hidden = true; return; }
+  bar.hidden = false;
+  bar.innerHTML = `<span>↩ REPLYING TO <b>${esc((roster.get(q.pilot)?.nick ?? "PILOT").toUpperCase())}</b> · ${esc(snippet(q.body))}</span><button type="button" class="key icon sm" data-unreply aria-label="Cancel the reply">×</button>`;
 }
 function airList() {
   if (!fleet.hosts.length) return `<p class="note">NOBODY IS BROADCASTING RIGHT NOW. START ONE WITH <span class="ico-in">${ICON.cast}</span> IN THE PLAYER.</p>`;
@@ -100,6 +134,7 @@ function paint() {
   f.hidden = view === "air"; f.classList.toggle("off", !pilot.me);
   inp.disabled = !pilot.me;
   inp.placeholder = !pilot.me ? "sign in to transmit" : view === "fleet" ? "talk to your fleet" : "transmit to all pilots";
+  paintReply();
   const n = $("commsNote"); n.hidden = !note; n.textContent = note?.text ?? ""; n.className = `fmsg ${note?.kind === "err" ? "err" : ""}`;
 }
 function paintUnread() {
@@ -132,10 +167,10 @@ async function send() {
   if (text.startsWith("/")) { await command(text); return; }
   if (!beta.open) { tell("Closed beta: COMMS opens once you have access. Enter an invite in your pilot card"); return; }
   inp.disabled = true;
-  const e = await transmit(r, text);
+  const e = await transmit(r, text, replyTo);
   inp.disabled = false; inp.focus();
   if (e) { tell(e === "too-fast" ? "Too fast. One message every few seconds" : "Transmission failed. Try again"); return; }
-  inp.value = ""; note = null; paint(); $("commsList").scrollTop = $("commsList").scrollHeight;
+  inp.value = ""; note = null; replyTo = null; paint(); $("commsList").scrollTop = $("commsList").scrollHeight;
 }
 
 /** the console: /ranks lists them; /rank CALLSIGN RANK (the founder) gives one */
@@ -165,6 +200,19 @@ async function command(text: string) {
 
 async function act(e: Event) {
   const t = e.target as HTMLElement;
+  const rxk = t.closest<HTMLElement>("[data-rx]");
+  if (rxk) {
+    if (!pilot.me) { openPilot(); return; }
+    if (!beta.open) { ui.locked(-1); return; }
+    const [id, kind] = rxk.dataset.rx!.split(":"); const err = await toggleReaction(+id, kind, pilot.me.id);
+    if (err) tell(/reactions/.test(err) ? "Reactions aren't switched on yet" : "Couldn't react. Try again");
+    return;
+  }
+  const rp = t.closest<HTMLElement>("[data-reply]");
+  if (rp) { replyTo = +rp.dataset.reply!; paint(); $<HTMLInputElement>("commsIn").focus(); return; }
+  if (t.closest("[data-unreply]")) { replyTo = null; paint(); return; }
+  const go = t.closest<HTMLElement>("[data-goto]");
+  if (go) { const el = document.querySelector<HTMLElement>(`#commsList [data-mid="${go.dataset.goto}"]`); el?.scrollIntoView({ block: "center", behavior: "smooth" }); el?.classList.add("flash"); setTimeout(() => el?.classList.remove("flash"), 1200); return; }
   const sg = t.closest<HTMLElement>("[data-sig]");
   if (sg) { const [s, i] = sg.dataset.sig!.split(".").map(Number); select({ kind: "track", s, i }, true, true); return; }
   const j = t.closest<HTMLElement>("[data-join]"); if (j) { if (!beta.open) { ui.locked(-1); return; } await tuneIn(j.dataset.join!); return; }

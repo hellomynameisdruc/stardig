@@ -7,7 +7,40 @@ import { lookup, roster } from "./pilots";
 
 export const ALL = "all";
 const KEEP = 80;
-export type Msg = { id: number; pilot: string; body: string; created_at: string; room?: string };
+/** reply_to: the message this one answers */
+export type Msg = { id: number; pilot: string; body: string; created_at: string; room?: string; reply_to?: number | null };
+/** the message columns to read; without replies if the database hasn't got them yet */
+let MCOLS = "id,pilot,body,created_at,room,reply_to";
+const dropReplies = (msg: string) => { if (/reply_to/.test(msg) && MCOLS.endsWith(",reply_to")) { MCOLS = "id,pilot,body,created_at,room"; return true; } return false; };
+
+// —— reactions: per message, per kind, who
+export const REACTIONS: Record<string, { glyph: string; name: string }> = {
+  love: { glyph: "♥", name: "Love it" }, banger: { glyph: "▲", name: "Banger" }, rare: { glyph: "◎", name: "Rare find" }, respect: { glyph: "✦", name: "Respect" },
+};
+const rx = new Map<number, Map<string, Set<string>>>();
+/** who reacted how to message id */
+export const reactionsOf = (id: number) => rx.get(id);
+function addRx(id: number, kind: string, who: string, on: boolean) {
+  let m = rx.get(id); if (!m) rx.set(id, (m = new Map()));
+  let set = m.get(kind); if (!set) m.set(kind, (set = new Set()));
+  if (on) set.add(who); else set.delete(who);
+}
+async function loadReactions(ids: number[]) {
+  if (!ids.length) return;
+  const { data, error } = await (await cloud()).from("reactions").select("message,pilot,kind").in("message", ids);
+  if (error) return; // no reactions table yet
+  for (const r of (data ?? []) as { message: number; pilot: string; kind: string }[]) addRx(r.message, r.kind, r.pilot, true);
+}
+/** react to a message, or take the reaction back: null when done, else why not */
+export async function toggleReaction(id: number, kind: string, me: string) {
+  const on = !rx.get(id)?.get(kind)?.has(me), sb = await cloud();
+  addRx(id, kind, me, on); emit({ kind: "removed" }); // show it at once
+  const { error } = on ? await sb.from("reactions").insert({ message: id, kind }) : await sb.from("reactions").delete().eq("message", id).eq("pilot", me).eq("kind", kind);
+  if (error && error.code !== "23505") { addRx(id, kind, me, !on); emit({ kind: "removed" }); return error.message; }
+  return null;
+}
+/** a message we have, by id (to quote what a reply answers) */
+export function messageById(id: number) { for (const l of rooms.values()) { const m = l.find((x) => x.id === id); if (m) return m; } return null; }
 const rooms = new Map<string, Msg[]>(), loaded = new Set<string>();
 let live: RealtimeChannel | null = null, wanted: (room: string) => boolean = (r) => r === ALL;
 
@@ -27,9 +60,11 @@ function add(m: Msg) {
 export async function loadRoom(r: string) {
   if (loaded.has(r)) return true; loaded.add(r);
   const sb = await cloud();
-  const { data, error } = await sb.from("messages").select("id,pilot,body,created_at,room").eq("room", r).order("created_at", { ascending: false }).limit(KEEP);
+  let { data, error } = await sb.from("messages").select(MCOLS).eq("room", r).order("created_at", { ascending: false }).limit(KEEP);
+  if (error && dropReplies(error.message)) ({ data, error } = await sb.from("messages").select(MCOLS).eq("room", r).order("created_at", { ascending: false }).limit(KEEP));
   if (error) { loaded.delete(r); return false; }
-  for (const m of ((data ?? []) as Msg[]).reverse()) add({ ...m, room: r });
+  await loadReactions(((data ?? []) as unknown as Msg[]).map((m) => m.id)).catch(() => {});
+  for (const m of ((data ?? []) as unknown as Msg[]).reverse()) add({ ...m, room: r });
   bucket(r).sort((a, b) => a.id - b.id);
   await lookup(bucket(r).map((m) => m.pilot)).catch(() => {});
   emit({ kind: "loaded", room: r }); return true;
@@ -50,6 +85,13 @@ export async function goLive(want: (room: string) => boolean) {
     .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, (e) => {
       if (forget((e.old as { id?: number }).id)) emit({ kind: "removed" });
     })
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "reactions" }, (e) => {
+      const r = e.new as { message: number; pilot: string; kind: string }; addRx(r.message, r.kind, r.pilot, true); emit({ kind: "removed" });
+    })
+    .on("postgres_changes", { event: "DELETE", schema: "public", table: "reactions" }, (e) => {
+      const r = e.old as { message?: number; pilot?: string; kind?: string };
+      if (r.message && r.pilot && r.kind) { addRx(r.message, r.kind, r.pilot, false); emit({ kind: "removed" }); }
+    })
     .subscribe();
   addEventListener("beforeunload", () => { live?.unsubscribe(); });
 }
@@ -60,10 +102,12 @@ function forget(id?: number) {
 }
 
 /** null when sent, else "too-fast" or the reason */
-export async function transmit(room: string, text: string) {
-  const { data, error } = await (await cloud()).from("messages").insert({ room, body: text.slice(0, 400) }).select("id,pilot,body,created_at,room").single();
+export async function transmit(room: string, text: string, replyTo: number | null = null) {
+  const sb = await cloud(), row = { room, body: text.slice(0, 400), ...(replyTo && MCOLS.endsWith(",reply_to") ? { reply_to: replyTo } : {}) };
+  let { data, error } = await sb.from("messages").insert(row).select(MCOLS).single();
+  if (error && dropReplies(error.message)) ({ data, error } = await sb.from("messages").insert({ room, body: row.body }).select(MCOLS).single());
   if (error) return /TOO FAST/.test(error.message) ? "too-fast" : error.message;
-  const m = data as Msg; if (add({ ...m, room })) emit({ kind: "new", room, msg: m });
+  const m = data as unknown as Msg; if (add({ ...m, room })) emit({ kind: "new", room, msg: m });
   return null;
 }
 export async function remove(id: number) {
