@@ -1,6 +1,6 @@
 // The dossier panel on the right: sector overview, star, planet or track, each with its own scope.
 import type { PType, Sel } from "../core/types";
-import { esc, fmt, hash, pad } from "../core/util";
+import { esc, fmt, hash, lcg, pad } from "../core/util";
 import { $, reduce } from "../core/dom";
 import { beacons, chunk, galaxy, isNowPlaying, ore, state, tracks } from "../app/state";
 import { PTYPE_INFO, spanOf } from "../model/galaxy";
@@ -29,6 +29,14 @@ const trackItem = (s: number, i: number, n: number) => {
   const ch = chunk(s)!;
   return `<button data-r="${R({ kind: "track", s, i })}" class="${isNowPlaying(s, i) ? "now" : ""}"><span class="n">${pad(n, 3)}</span><span class="t">${esc(ch.an[ch.a[i]])} — ${esc(ch.t[i])}</span><span class="y">${ch.yr[i] || "----"}</span></button>`;
 };
+/** a planet's satellites in a random order: a fresh shuffle per planet, kept until ↻ asks for another */
+const shuffles = new Map<number, number>();
+function shuffled(pi: number, from: number, n: number) {
+  let seed = shuffles.get(pi); if (seed === undefined) { seed = 1 + Math.floor(Math.random() * 2147483645); shuffles.set(pi, seed); }
+  const rnd = lcg(seed), out = Array.from({ length: n }, (_, k) => from + k);
+  for (let k = n - 1; k > 0; k--) { const j = Math.floor(rnd() * (k + 1)); [out[k], out[j]] = [out[j], out[k]]; }
+  return out;
+}
 const heroCanvas = () => document.querySelector<HTMLCanvasElement>("#hero canvas");
 const hist = (cnt: number[], y0: number, title: string) => {
   const mx = Math.max(1, ...cnt), y1 = y0 + cnt.length - 1;
@@ -121,8 +129,8 @@ function planet(pi: number, o: Sel) {
       ${activity}
       ${ch && n && !g.meta.sample ? `<button class="play" data-orbit="${pi}">▶ SOLARIS STATION</button>` : ""}
       ${ly ? `<button class="plot crt" data-years="${pi}"><span>⟶ TIME WARP · ${ly[0]}–${ly[1]}</span></button>` : ""}
-      <div><div class="ph-sub">SATELLITES</div><div class="list">${ch ? Array.from({ length: shown }, (_, k) => trackItem(p.s, p.t0 + k, k + 1)).join("") : `<p class="note">LOADING…</p>`}</div>
-      ${n > shown ? `<div class="more">…and ${fmt(n - shown)} more. Zoom in on the planet to see them all.</div>` : ""}
+      <div><div class="ph-sub sat-head"><span>SATELLITES · SHUFFLED</span><button type="button" class="out" data-shuffle="${pi}" title="Another random order">↻ SHUFFLE</button></div><div class="list">${ch ? shuffled(pi, p.t0, n).slice(0, shown).map((i, k) => trackItem(p.s, i, k + 1)).join("") : `<p class="note">LOADING…</p>`}</div>
+      ${n > shown ? `<div class="more">${fmt(shown)} of ${fmt(n)} at random: ↻ for others, or zoom in on the planet to see them all.</div>` : ""}
       ${p.v ? `<div class="more">+ ${fmt(p.v[1])} more in the vault, off the map: SOLARIS STATION plays them too.</div>` : ""}</div>`,
   };
 }
@@ -199,6 +207,7 @@ export function initDossier() {
     const yr = t.closest<HTMLElement>("[data-years]"); if (yr) { playLightYears(+yr.dataset.years!); return; }
     const nb = t.closest<HTMLElement>("[data-neb]"); if (nb) { flyToNebula(+nb.dataset.neb!); return; }
     const po = t.closest<HTMLElement>("[data-orbit]"); if (po) { playOrbit(+po.dataset.orbit!); return; }
+    const sf = t.closest<HTMLElement>("[data-shuffle]"); if (sf) { shuffles.delete(+sf.dataset.shuffle!); renderDossier(); return; }
     const dg = t.closest<HTMLElement>("[data-dig]"); if (dg) { digBelt(+dg.dataset.dig!); return; }
     if (t.closest("[data-like]")) { if (state.sel?.kind === "track") toggleBeacon(state.sel); return; }
     const sh = t.closest<HTMLElement>("[data-share]"); if (sh) { if (state.sel?.kind === "track") shareTrack(state.sel, sh.dataset.share as "copy" | "send", sh); return; }

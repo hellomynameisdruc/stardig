@@ -115,3 +115,4 @@ button.out { background: none; border: 0; border-bottom: 1px dotted var(--faint)
 .about summary { cursor: var(--cur-hand, pointer); font-family: var(--f-dot); font-size: var(--fs-xs); letter-spacing: .14em; color: var(--dim); list-style: none }
 .about summary::before { content: "? " }
 .about[open] summary { margin-bottom: 6px }
+.sat-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px }
