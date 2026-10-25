@@ -6,7 +6,7 @@
 import { esc, pad } from "../core/util";
 import { $ } from "../core/dom";
 import { ALL, clearInvites, dropRoom, goLive, grantRank, loadRoom, messages, onComms, remove, report, transmit, type Msg } from "../cloud/comms";
-import { grantAccess, lookup, makeInvite, onPilot, pilot, roster, wake } from "../cloud/pilots";
+import { grantAccess, lookup, makeInvite, onPilot, pilot, roster, waitingPilots, wake } from "../cloud/pilots";
 import { beta } from "../app/beta";
 import { ui } from "../app/ports";
 import { fleet, fleetRoom, inviteLink, known, leave, onFleet, tuneIn, watchOnAir } from "../cloud/fleet";
@@ -108,6 +108,15 @@ function paintUnread() {
 }
 const tell = (text: string, kind: "err" | "info" = "err") => { note = { text: text.toUpperCase(), kind }; paint(); };
 
+/** the founder's list of pilots waiting for access, as a note in COMMS */
+export async function showWaiting() {
+  document.getElementById("tabComms")?.click(); // the COMMS tab, where the note shows
+  const list = await waitingPilots();
+  if (!list) { tell("Could not read the registry (has the closed-beta SQL been run?)"); return; }
+  const ago = (t: string) => { const m = Math.round((Date.now() - Date.parse(t)) / 60000); return m < 60 ? `${m}m` : m < 2880 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`; };
+  tell(list.length ? `Waiting for access (${list.length}): ${list.map((p) => `${p.nick} · ${ago(p.created_at)}`).join(" / ")}. Let one in: /approve CALLSIGN` : "Nobody is waiting for access", "info");
+}
+
 // —— doing
 async function start() {
   if (started) return; started = true;
@@ -132,8 +141,9 @@ async function send() {
 /** the console: /ranks lists them; /rank CALLSIGN RANK (the founder) gives one */
 async function command(text: string) {
   const inp = $<HTMLInputElement>("commsIn"), [cmd, nick, ...rest] = text.slice(1).trim().split(/\s+/);
-  if (cmd === "ranks" || cmd === "help") { inp.value = ""; tell(`Ranks: ${Object.keys(RANKS).join(" · ")}. Give one: /rank CALLSIGN RANK. Closed beta: /approve CALLSIGN · /revoke CALLSIGN · /invite [PILOTS]`, "info"); return; }
+  if (cmd === "ranks" || cmd === "help") { inp.value = ""; tell(`Ranks: ${Object.keys(RANKS).join(" · ")}. Give one: /rank CALLSIGN RANK. Closed beta: /waiting · /approve CALLSIGN · /revoke CALLSIGN · /invite [PILOTS]`, "info"); return; }
   // the closed beta (the founder): let a pilot in or out, make an invite code
+  if (cmd === "waiting") { inp.value = ""; await showWaiting(); return; }
   if (cmd === "approve" || cmd === "revoke") {
     if (!nick) { tell(`Who? /${cmd} CALLSIGN`); return; }
     const res = await grantAccess(nick, cmd === "approve");

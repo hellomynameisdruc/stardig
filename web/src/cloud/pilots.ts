@@ -110,6 +110,20 @@ export async function makeInvite(uses: number): Promise<{ code: string } | { err
   return { code: String(data) };
 }
 
+/** pilots still waiting for access, newest first (the founder's list) */
+export async function waitingPilots(): Promise<{ nick: string; created_at: string }[] | null> {
+  const { data, error } = await (await cloud()).from("pilots").select("nick,created_at").eq("access", false).eq("admin", false).order("created_at", { ascending: false }).limit(50);
+  return error ? null : (data as { nick: string; created_at: string }[]);
+}
+/** the founder's ear on the registry: a pilot signed up (INSERT) or was let in (UPDATE, access on) */
+export async function watchPilots(fn: (kind: "new" | "in", nick: string) => void) {
+  const sb = await cloud();
+  return sb.channel("comms:pilots", { config: { private: true } })
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "pilots" }, (e) => fn("new", String((e.new as Pilot).nick)))
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "pilots" }, (e) => { const p = e.new as Pilot; if (p.access) fn("in", String(p.nick)); })
+    .subscribe();
+}
+
 export async function signOut() {
   await (await cloud()).auth.signOut();
   pilot.session = null; pilot.me = null; pilotChanged();

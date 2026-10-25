@@ -3,7 +3,8 @@
 import { beta, openName, starOpen } from "../app/beta";
 import { galaxy, state } from "../app/state";
 import { provide, ui } from "../app/ports";
-import { onPilot, pilot } from "../cloud/pilots";
+import { onPilot, pilot, waitingPilots, watchPilots } from "../cloud/pilots";
+import { showWaiting } from "./comms";
 import { openPilot } from "./pilot";
 import { clearMode, say, setMode } from "./rail";
 
@@ -27,11 +28,31 @@ export function lockDossier(d: HTMLElement) {
   keys.forEach((k) => k.remove());
 }
 
+// the founder: how many pilots wait for access, and word as soon as someone signs up or gets in
+let watching = false;
+const waiting = new Set<string>();
+async function founder() {
+  const list = await waitingPilots(); if (!list) return;
+  waiting.clear(); list.forEach((p) => waiting.add(p.nick));
+  paintWaiting();
+  if (watching) return;
+  watching = true;
+  watchPilots((kind, nick) => {
+    if (kind === "new") { waiting.add(nick); say(`New pilot: ${nick} signed up and waits for access`, "info"); }
+    else if (waiting.delete(nick)) say(`${nick} is in`, "ok");
+    paintWaiting();
+  });
+}
+function paintWaiting() {
+  if (!waiting.size) { clearMode("waiting"); return; }
+  setMode("waiting", `<b>${waiting.size}</b> ${waiting.size === 1 ? "PILOT WAITS" : "PILOTS WAIT"} FOR ACCESS`, [{ label: "LIST", run: () => { showWaiting(); } }]);
+}
+
 export function initBeta() {
   provide({
     locked: () => { say(`Closed beta: only ${openName()} is open. Sign in and ask for access, or enter an invite`, "err"); openPilot(); },
   });
   document.getElementById("detail")!.addEventListener("click", (e) => { if ((e.target as HTMLElement).closest("[data-beta]")) openPilot(); });
-  onPilot(paint);
+  onPilot(() => { paint(); if (pilot.me?.admin && beta.on) founder(); });
   paint();
 }

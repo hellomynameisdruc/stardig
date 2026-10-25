@@ -189,3 +189,8 @@ grant execute on function public.redeem_invite(text) to authenticated;
 drop policy if exists "pilots transmit as themselves" on public.messages;
 create policy "pilots transmit as themselves" on public.messages for insert to authenticated
   with check (pilot = auth.uid() and exists (select 1 from public.pilots where id = auth.uid() and (access or admin)));
+
+-- the founder hears about new pilots and invites used, live
+do $$ begin
+  alter publication supabase_realtime add table public.pilots;
+exception when duplicate_object then null; end $$;
