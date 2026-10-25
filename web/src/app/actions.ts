@@ -1,7 +1,7 @@
 // What the visitor can do — select, play, skip, plot a route, jump through a wormhole. UI modules call
 // these; these change the state and the camera and ask the UI to refresh.
 import type { Sel, TrackRef } from "../core/types";
-import { pad } from "../core/util";
+import { lcg, pad } from "../core/util";
 import { beacons, chunk, dead, flightLog, galaxy, motion, ore, state, tracks } from "./state";
 import { orbitR } from "../model/galaxy";
 import { HITCHHIKE_TRACKS, pickStopTracks, planLightYears, planRoute, planSystemTour, starEnd } from "../model/routes";
@@ -133,25 +133,37 @@ export function prev() {
   const h = state.history;
   if (h.length > 1) { h.pop(); const r = h.pop()!; select({ kind: "track", ...r }, true, true); }
 }
+// A planet's satellites in a random order: a fresh shuffle per planet, kept until it's asked for again.
+// The dossier lists them in this order and SOLARIS plays them in it.
+const shuffles = new Map<number, number>();
+export function satelliteOrder(pi: number): number[] {
+  const P = galaxy.planets[pi];
+  let seed = shuffles.get(pi); if (seed === undefined) { seed = 1 + Math.floor(Math.random() * 2147483645); shuffles.set(pi, seed); }
+  const rnd = lcg(seed), out = Array.from({ length: P.t1 - P.t0 }, (_, k) => P.t0 + k);
+  for (let k = out.length - 1; k > 0; k--) { const j = Math.floor(rnd() * (k + 1)); [out[k], out[j]] = [out[j], out[k]]; }
+  return out;
+}
+export const reshuffle = (pi: number) => { shuffles.delete(pi); };
+
 /**
- * A random satellite of the planet, preferring ones not heard yet this session — out of all the label's
- * tracks, the drawn ones and the ones in the vault alike.
+ * SOLARIS: the planet's satellites in the order its dossier lists them (the shuffle), from the next one
+ * not heard yet this session; once they're all heard, random tracks from the label's vault.
  */
 export function playOrbit(pi: number) {
   const p = galaxy.planets[pi], ch = chunk(p.s); if (p.t1 <= p.t0) return;
   if (!ch) { tracks.load(p.s).then(() => playOrbit(pi)); return; }
-  const np = state.nowPlaying;
-  const all = Array.from({ length: p.t1 - p.t0 }, (_, k) => p.t0 + k).filter((i) => !dead.has(ch.yt[i]));
-  const fresh = all.filter((i) => !state.played.has(ch.yt[i]) && !(np && np.s === p.s && np.i === i));
+  const np = state.nowPlaying, order = satelliteOrder(pi).filter((i) => !dead.has(ch.yt[i]));
   const inVault = p.v?.[1] ?? 0;
-  if (!all.length && !inVault) { state.orbit = null; return; } // every signal here has gone dark
+  if (!order.length && !inVault) { state.orbit = null; return; } // every signal here has gone dark
   if (state.routeIdx >= 0) { state.routeIdx = -1; ui.showRoute(); }
   if (state.orbit !== pi) state.orbitSince = Date.now(); // a new station starts its clock
   state.orbit = pi;
-  // drawn and vault tracks in proportion; the drawn pool is the fresh ones while there are any
-  const pool = fresh.length ? fresh : all, k = Math.floor(Math.random() * (pool.length + inVault));
-  if (k < pool.length) { select({ kind: "track", s: p.s, i: pool[k] }, true, true); return; }
-  adopt(p.s, p.v![0] + (k - pool.length)).then((i) => { if (state.orbit === pi) select({ kind: "track", s: p.s, i }, true, true); }).catch(() => {});
+  // after the one on air, the next in the list not heard yet
+  const at = np && np.s === p.s ? order.indexOf(np.i) : -1;
+  const next = [...order.slice(at + 1), ...order.slice(0, at + 1)].find((i) => !state.played.has(ch.yt[i]) && !(np && np.s === p.s && np.i === i));
+  if (next !== undefined) { select({ kind: "track", s: p.s, i: next }, true, true); return; }
+  if (inVault) { adopt(p.s, p.v![0] + Math.floor(Math.random() * inVault)).then((i) => { if (state.orbit === pi) select({ kind: "track", s: p.s, i }, true, true); }).catch(() => {}); return; }
+  if (order.length) select({ kind: "track", s: p.s, i: order[(at + 1) % order.length] }, true, true); // all heard: round again
 }
 /**
  * A station takes up orbit round the planet that is already playing, without changing the track: what
