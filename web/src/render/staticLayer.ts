@@ -147,8 +147,7 @@ export function drawStatic(lc: CanvasRenderingContext2D) {
   if (dustA > 0 && cam.s < LOD_TRACKS) {
     stars.forEach((s, si) => {
       if (!inView(s.x, s.y, s.R)) return;
-      const ch = baseChunk(si);
-      if (!ch) { if (s.R * cam.s > 220) tracks.load(si); return; }
+      const ch = baseChunk(si); if (!ch) return; // only systems already loaded: dust never fetches (memory)
       lc.fillStyle = sc(si, dustA);
       eachTrack(si, V0.x, V0.y, V1.x, V1.y, (i) => {
         if (ch.p[i] >= 0 || i & 1) return;

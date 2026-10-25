@@ -83,7 +83,10 @@ function texture(name: string, ty: PType, w: number): Tex {
     pit[k] = p;
   }
   t = { w, h: hh, band, pit };
-  if (texCache.size > 500) texCache.delete(texCache.keys().next().value!);
+  // the fine maps are big (½ MB each): keep few of them
+  const fine = [...texCache.keys()].filter((k) => !k.startsWith("128|"));
+  if (fine.length > 30) texCache.delete(fine[0]);
+  if (texCache.size > 400) texCache.delete(texCache.keys().next().value!);
   texCache.set(key, t);
   return t;
 }
@@ -106,7 +109,7 @@ function geo(D: number): Geo {
     lam[k] = Math.max(0, -nx * 0.55 - ny * 0.6 + nz * 0.58); // light from the upper left
   }
   g = { on, lon, lat, lam, img: sg.createImageData(D, D) };
-  if (geoCache.size > 24) geoCache.delete(geoCache.keys().next().value!);
+  if (geoCache.size > 10) geoCache.delete(geoCache.keys().next().value!);
   geoCache.set(D, g);
   return g;
 }

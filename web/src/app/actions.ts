@@ -288,7 +288,7 @@ export function warp() {
       const pi = ch.p[i], q = pi >= 0 ? motion.planetPos(pi) : { x: ch.x[i], y: ch.y[i] };
       cam.stop(); cam.x = q.x; cam.y = q.y; cam.s = cam.clampS(LOD_TITLES * 1.3);
       select({ kind: "track", s, i }, false, autoplay);
-    });
+    }).catch(() => { cam.stop(); const st = stars[s]; cam.x = st.x; cam.y = st.y; cam.s = cam.clampS(LOD_PLANETS * 1.3); select({ kind: "star", s }, false); }); // the tracks didn't come: land at the star
   });
 }
 /** fly to a galaxy (sector) so it fills the view */

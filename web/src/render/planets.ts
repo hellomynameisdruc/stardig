@@ -27,7 +27,7 @@ function liveSurface(i: number, D: number, spin: number, slot: number) {
   return e.c;
 }
 /** forget painted surfaces (after the colours change) */
-export function resetSurfaces() { live.clear(); for (let i = 0; i < pSprite.length; i++) if (pSprite[i]) { pSprite[i] = null; spriteCount--; } }
+export function resetSurfaces() { live.clear(); for (let i = 0; i < pSprite.length; i++) if (pSprite[i]) { free(pSprite[i]!.c); pSprite[i] = null; spriteCount--; } }
 
 /**
  * banded giants, ringed long-runners, cratered retired labels, icy newcomers: the surface is a relief
@@ -61,7 +61,11 @@ export function drawPlanetBody(G: CanvasRenderingContext2D, i: number, x: number
 // Planet bodies are cached as sprites at bucketed sizes (~19% steps) and scaled to the exact size,
 // so zooming doesn't repaint every planet on every wheel tick. Unused sprites are dropped.
 const pSprite: ({ c: HTMLCanvasElement; rb: number; used: number } | null)[] = galaxy.planets.map(() => null);
-let frameNo = 0, spriteCount = 0, frameT0 = 0;
+let frameNo = 0, spriteCount = 0, frameT0 = 0, spritePx = 0;
+/** sprite memory kept, in pixels (×4 bytes): past it the least recently drawn are dropped. Safari reloads a
+ *  tab whose canvases take too much memory, so this is a hard ceiling, not a count */
+const SPRITE_PX = 24e6;
+const free = (c: HTMLCanvasElement) => { spritePx -= c.width * c.height; c.width = c.height = 0; };
 const SPRITE_BUDGET = 4; // ms of sprite painting per frame
 function planetSprite(i: number, r: number): { c: HTMLCanvasElement; k: number } | null {
   const rb = Math.pow(2, Math.round(Math.log2(r) * 4) / 4), DPR = cam.DPR; // size steps of ~19%
@@ -74,7 +78,7 @@ function planetSprite(i: number, r: number): { c: HTMLCanvasElement; k: number }
     const gn = genome(galaxy.planets[i].name, galaxy.ptype[i]);
     const half = Math.ceil((galaxy.ringed[i] ? rb * (gn.ringRx + gn.ringW) : rb) + 3), w = half * 2;
     const c = e?.c ?? document.createElement("canvas"), px = Math.ceil(w * DPR);
-    if (c.width !== px || c.height !== px) { c.width = c.height = px; } else c.getContext("2d")!.clearRect(0, 0, px, px);
+    if (c.width !== px || c.height !== px) { spritePx += px * px - (e ? c.width * c.height : 0); c.width = c.height = px; } else c.getContext("2d")!.clearRect(0, 0, px, px);
     const g = c.getContext("2d")!; g.setTransform(DPR, 0, 0, DPR, 0, 0);
     drawPlanetBody(g, i, half, half, rb);
     if (!e) spriteCount++;
@@ -86,8 +90,10 @@ function planetSprite(i: number, r: number): { c: HTMLCanvasElement; k: number }
 /** call once per frame */
 export function tickSprites() {
   frameNo++; frameT0 = performance.now();
-  if (frameNo % 120 !== 0 || spriteCount < 600) return;
-  for (let i = 0; i < pSprite.length; i++) { const e = pSprite[i]; if (e && frameNo - e.used > 240) { pSprite[i] = null; spriteCount--; } }
+  if (frameNo % 30 !== 0 || (spritePx < SPRITE_PX && spriteCount < 600)) return;
+  // over the ceiling: drop sprites not drawn for a while, oldest first, until well under it
+  const idle = pSprite.map((e, i) => (e && frameNo - e.used > 2 ? i : -1)).filter((i) => i >= 0).sort((a, b) => pSprite[a]!.used - pSprite[b]!.used);
+  for (const i of idle) { if (spritePx < SPRITE_PX * 0.7 && spriteCount < 500) break; free(pSprite[i]!.c); pSprite[i] = null; spriteCount--; }
 }
 
 /** the planets in focus: selected, playing, or with a Solaris station in orbit */

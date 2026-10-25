@@ -58,14 +58,22 @@ class Camera {
     this.s = Math.exp(Math.log(t.fs) + (Math.log(t.ts) - Math.log(t.fs)) * e - bump);
     this.warpFx = reduce ? 0 : Math.min(1, bump);
     if (k >= 1) { this.tween = null; this.warpFx = 0; }
+    this.keepIn();
     return true;
   }
 
+  /** never let the view drift off the map or zoom past its limits (a stalled frame can't throw it away) */
+  keepIn() {
+    const b = galaxy.bounds, m = Math.max(b.w, b.h);
+    if (!Number.isFinite(this.x) || !Number.isFinite(this.y) || !Number.isFinite(this.s)) { this.x = b.x; this.y = b.y; this.s = this.homeScale(); this.tween = null; return; }
+    this.x = Math.max(b.x - m, Math.min(b.x + m, this.x)); this.y = Math.max(b.y - m, Math.min(b.y + m, this.y));
+    this.s = Math.max(this.minS() * 0.25, Math.min(MAX_SCALE, this.s));
+  }
   /** zoom by factor k keeping the screen point (sx, sy) fixed */
   zoomAt(sx: number, sy: number, k: number) {
     const before = this.toWorld(sx, sy);
     this.s = this.clampS(this.s * k);
-    const after = this.toWorld(sx, sy); this.x += before.x - after.x; this.y += before.y - after.y; this.tween = null;
+    const after = this.toWorld(sx, sy); this.x += before.x - after.x; this.y += before.y - after.y; this.tween = null; this.keepIn();
   }
 }
 

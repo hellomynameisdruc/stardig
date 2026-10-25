@@ -37,7 +37,7 @@ export function initInput() {
     const prev = ptrs.get(e.pointerId)!, dx = L.x - prev.x, dy = L.y - prev.y; ptrs.set(e.pointerId, L);
     if (ptrs.size === 2 && pinch0) { const [a, b] = [...ptrs.values()]; cam.s = cam.clampS(pinch0.s * Math.hypot(a.x - b.x, a.y - b.y) / pinch0.d); dragged += 10; return; }
     dragged += Math.abs(dx) + Math.abs(dy);
-    if (dragged > 4) { cam.stop(); cam.unfollow(); cam.x -= dx / cam.s; cam.y -= dy / cam.s; }
+    if (dragged > 4) { cam.stop(); cam.unfollow(); cam.x -= dx / cam.s; cam.y -= dy / cam.s; cam.keepIn(); }
   });
   const up = (e: PointerEvent) => {
     ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch0 = null; cv.classList.remove("drag");

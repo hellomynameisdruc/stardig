@@ -102,3 +102,4 @@
    monitors where text would get too fine). The YouTube player grows to match (see player.css). */
 @media (min-width: 1100px) and (pointer: fine) { html { zoom: .8 } }
 @media (min-width: 1800px) and (pointer: fine) { html { zoom: .9 } }
+html.is-safari { zoom: 1 !important } /* see index.html */
