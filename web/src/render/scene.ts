@@ -124,7 +124,16 @@ function drawFleet(ctx: CanvasRenderingContext2D, si: number, x: number, y: numb
   ctx.restore();
 }
 
+// Frame pacing: full speed while something moves on purpose (a flight, zoom, drag, a wormhole); the slow
+// drift of orbits and pulsing stars is drawn at ~15 fps, and ~8 fps after 20 s untouched, so a
+// laptop doesn't run hot just showing the map.
+let lastInput = performance.now(), lastDrawn = 0;
+for (const ev of ["pointerdown", "pointermove", "wheel", "keydown", "touchstart"]) addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true, capture: true });
 function frame(now: number) {
+  const busy = cam.flying || state.warping || state.dirty || now - lastInput < 1500;
+  const gap = busy ? 0 : now - lastInput < 20000 ? 66 : 125;
+  if (gap && now - lastDrawn < gap) { requestAnimationFrame(frame); return; }
+  lastDrawn = now;
   motion.now = now;
   // a flight doesn't repaint the background every frame (the costliest thing we draw): drawLive slides
   // and stretches the last picture and repaints it only now and then, and once the flight lands
