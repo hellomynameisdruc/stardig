@@ -140,6 +140,11 @@ function paint() {
   if (view === "fleet" && !fleet.role) view = "all";
   const el = $("commsList"), atEnd = el.scrollHeight - el.scrollTop - el.clientHeight < 40, msgs = messages(room());
   const invite = fleet.role ? `<div class="fl-inv"><span>INVITE PILOTS</span><button type="button" class="key sm" data-fl-copy>COPY LINK</button><button type="button" class="key sm" data-fl-post>POST TO ALL</button></div>` : "";
+  // older shared tracks are looked up newest first, so the latest cards fill in before the old ones
+  if (seen() && view !== "air") for (let k = msgs.length - 1; k >= 0; k--) {
+    const sig = parseSignal(msgs[k].body);
+    if (sig && !/^♪/.test(withoutSignal(msgs[k].body)) && placed(sig) === undefined) awaitSignal(sig);
+  }
   el.innerHTML = view === "air" ? airList()
     : view === "fleet" ? invite + (msgs.length ? msgs.map(line).join("") : `<p class="note">THE FLEET'S OWN CHANNEL. ITS MESSAGES FADE A FEW HOURS ON.</p>`)
     : msgs.length ? msgs.map(line).join("") : `<p class="note">${started ? "SILENCE ON THE CHANNEL FOR A DAY. SAY HELLO." : "TUNING IN…"}</p>`;
