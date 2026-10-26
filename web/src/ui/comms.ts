@@ -6,7 +6,8 @@
 import { esc, pad } from "../core/util";
 import { $ } from "../core/dom";
 import { ALL, clearInvites, dropRoom, goLive, grantRank, loadRoom, messageById, messages, onComms, REACTIONS, reactionsOf, remove, report, toggleReaction, transmit, type Msg } from "../cloud/comms";
-import { grantAccess, lookup, makeInvite, onPilot, pilot, roster, waitingPilots, wake } from "../cloud/pilots";
+import { crewCount, grantAccess, lookup, makeInvite, onPilot, pilot, roster, waitingPilots, wake } from "../cloud/pilots";
+import { setCrew } from "./ticker";
 import { beta } from "../app/beta";
 import { ui } from "../app/ports";
 import { fleet, fleetRoom, inviteLink, known, leave, onFleet, tuneIn, watchOnAir } from "../cloud/fleet";
@@ -278,7 +279,11 @@ export function initComms() {
   document.querySelectorAll<HTMLElement>("#comms .tabs [data-ch]").forEach((b) => {
     b.onclick = () => { view = b.dataset.ch as View; note = null; paint(); if (view !== "air") $("commsList").scrollTop = 1e9; };
   });
+  // the pilots in the ranks, on the ticker: now, every few minutes, and as soon as SYSTEM welcomes one
+  const count = () => crewCount().then(setCrew).catch(() => {});
+  setTimeout(count, 3000); setInterval(count, 5 * 60_000);
   onComms((c) => {
+    if (c.kind === "new" && !c.msg.pilot) count();
     if (c.kind === "new" && c.msg.pilot !== pilot.me?.id && !seen()) { unread++; paintUnread(); }
     if (started || !$("comms").hidden) paint();
     if (c.kind === "loaded") toEnd();

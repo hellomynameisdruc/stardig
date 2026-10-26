@@ -134,3 +134,9 @@ export async function deleteAccount() {
   await sb.auth.signOut().catch(() => {});
   pilot.session = null; pilot.me = null; pilotChanged(); return null;
 }
+
+/** how many pilots are in the ranks (let into the beta, or staff); null when the registry can't say */
+export async function crewCount(): Promise<number | null> {
+  const sb = await cloud(), { count, error } = await sb.from("pilots").select("id", { count: "exact", head: true }).or("access.eq.true,admin.eq.true");
+  return error ? null : count ?? null;
+}

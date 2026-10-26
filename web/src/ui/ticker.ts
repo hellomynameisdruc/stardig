@@ -5,12 +5,15 @@ import { beacons, chunk, galaxy, ore, state } from "../app/state";
 import { provide } from "../app/ports";
 
 let last = "";
+let crew: number | null = null;
+/** the pilots in the ranks, for the ticker */
+export function setCrew(n: number | null) { if (n !== null && n !== crew) { crew = n; ticker(); } }
 export function ticker() {
   const { stars, planets, links, meta } = galaxy, np = state.nowPlaying;
   let on = "ON AIR: SILENCE";
   if (np && chunk(np.s)) { const ch = chunk(np.s)!; on = `ON AIR: <b>${esc(ch.an[ch.a[np.i]])} — ${esc(ch.t[np.i])}</b>${state.onAir ? "" : " [PAUSED]"}`; }
   const big = stars.slice().sort((a, b) => b.tracks - a.tracks)[0];
-  const parts = [on, ...(galaxy.nebulae.length ? [`GALAXIES <b>${galaxy.nebulae.length}</b>`] : []), `STARS <b>${stars.length}</b>`, `PLANETS <b>${fmt(planets.length)}</b>`, `SATELLITES <b>${fmt(meta.tracks)}</b>`, `RELEASES <b>${fmt(meta.releases)}</b>`,
+  const parts = [on, ...(crew !== null ? [`PILOTS IN THE RANKS <b>${fmt(crew)}</b>`] : []), ...(galaxy.nebulae.length ? [`GALAXIES <b>${galaxy.nebulae.length}</b>`] : []), `STARS <b>${stars.length}</b>`, `PLANETS <b>${fmt(planets.length)}</b>`, `SATELLITES <b>${fmt(meta.tracks)}</b>`, `RELEASES <b>${fmt(meta.releases)}</b>`,
     `LARGEST SYSTEM <b style="color:${big?.color}">${esc(big?.name.toUpperCase() || "—")}</b>`, `STYLE LINKS <b>${links.length}</b>`, `PLAYED THIS VISIT <b>${state.played.size}</b>`, `BEACONS <b>${beacons.size}</b>`, `ORE MINED <b>${ore.size}</b>`, `SOURCE <b>DISCOGS CC0</b>`];
   const one = parts.map((p) => `<span>${p}</span>`).join("");
   // rebuild only when the text changes, so the marquee doesn't jump
