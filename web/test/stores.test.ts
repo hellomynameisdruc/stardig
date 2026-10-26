@@ -96,3 +96,22 @@ describe("DeadSignals", () => {
     expect(d.size).toBe(DEAD_MAX); expect(d.has("aaa")).toBe(false); expect(d.has("v" + (DEAD_MAX - 1))).toBe(true);
   });
 });
+
+describe("Beacon lists", () => {
+  it("makes lists, files beacons into them, and forgets removed beacons everywhere", () => {
+    const kv = memoryKV(); const b = new Beacons(kv, () => chunk);
+    const id = b.createList("  night   drive ")!;
+    expect(b.getList(id)!.name).toBe("night drive");
+    b.toggleIn(id, "aaa"); expect(b.inList(id, "aaa")).toBe(false); // only beaconed tracks go in
+    b.toggle({ s: 0, i: 0 }); b.toggleIn(id, "aaa");
+    expect(b.of(id).map((x) => x.y)).toEqual(["aaa"]);
+    b.setCurrent(id); b.toggle({ s: 0, i: 1 }); // the open list gets new beacons
+    expect(b.of(id).map((x) => x.y)).toEqual(["bbb", "aaa"]);
+    expect(b.playlistLinks(id)[0]).toContain("bbb,aaa");
+    const again = new Beacons(kv, () => chunk); // survives reload
+    expect(again.current).toBe(id); expect(again.lists[0].ys).toEqual(["bbb", "aaa"]);
+    b.remove("aaa"); expect(b.getList(id)!.ys).toEqual(["bbb"]);
+    let gone = ""; b.listGone.on((x) => { gone = x; });
+    b.deleteList(id); expect(b.lists.length).toBe(0); expect(b.current).toBe(""); expect(gone).toBe(id);
+  });
+});

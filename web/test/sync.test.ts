@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("../src/app/state", () => ({ beacons: { all: [], changed: { on() {} } }, flightLog: { all: [], size: 0, changed: { on() {} } } }));
 vi.mock("../src/ui/pilot", () => ({ onPilot() {}, pilot: { me: null } }));
 vi.mock("../src/cloud/client", () => ({ cloud: async () => ({}) }));
-import { mergeLogbook } from "../src/cloud/sync";
+import { mergeLists, mergeLogbook } from "../src/cloud/sync";
 
 const b = (y: string, at: number) => ({ y, s: 0, i: 0, t: y, a: "", at });
 describe("logbook merge", () => {
@@ -29,5 +29,14 @@ describe("logbook merge", () => {
   it("flights: one entry per track, the latest, newest first", () => {
     const m = mergeLogbook([], [{ k: "1-2", t: 10, y: "x" }], {}, { flights: [{ k: "1-2", t: 20, y: "x" }, { k: "3-4", t: 15, y: "z" }] });
     expect(m.flights.map((e) => e.t)).toEqual([20, 15]);
+  });
+});
+
+describe("list merge", () => {
+  const L = (id: string, at: number, ys: string[], name = id) => ({ id, name, ys, at });
+  it("keeps the copy changed last, honours deleted lists, drops tracks no longer beaconed", () => {
+    const out = mergeLists([L("a", 5, ["x", "z"], "local"), L("b", 1, [])], [L("a", 3, ["x"], "remote"), L("c", 2, ["y"]), L("d", 2, [])], { "L:d": 9, "L:b": 0 }, new Set(["x", "y"]));
+    expect(out.map((l) => l.id)).toEqual(["a", "c", "b"]);
+    expect(out[0]).toMatchObject({ name: "local", ys: ["x"] });
   });
 });

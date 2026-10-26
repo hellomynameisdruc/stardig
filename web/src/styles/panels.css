@@ -130,3 +130,32 @@
 .comms-reply { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px; border: 1px dashed var(--line); font-size: var(--fs-xs); color: var(--dim); min-width: 0 }
 .comms-reply span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0 }
 .comms-reply b { font-weight: 400; color: var(--ink) }
+
+/* BEACONS: lists */
+.bl-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 6px }
+.bl-c { padding: 3px 7px; background: none; border: 1px dashed var(--line); color: var(--dim); font-family: var(--f-dot); font-size: var(--fs-xs); letter-spacing: .1em; cursor: var(--cur-hand, pointer); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.bl-c b { font-weight: normal; opacity: .7 }
+.bl-c:hover { color: var(--ink); border-color: var(--ink) }
+.bl-c.on { color: var(--inv-ink); background: var(--ink); border: 1px solid var(--ink) }
+.bl-c.add { border-color: var(--faint) }
+.bl-bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 6px; font-size: var(--fs-xs); color: var(--dim); letter-spacing: .08em }
+.bl-bar > span { flex: 1 }
+.bl-bar .link, .bl-bar .warn { font-size: var(--fs-xs) }
+.bl-bar .warn { color: var(--red-ink) }
+.bl-name, .lp-n { display: flex; gap: 4px; margin: 0 0 6px }
+.bl-name input, .lp-n input { flex: 1; min-width: 0; background: transparent; border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: var(--fs-s); padding: 3px 6px; text-transform: uppercase }
+.bl-name input:focus, .lp-n input:focus { outline: none; border-color: var(--ink) }
+.unlike.addl { font-size: var(--fs-s) }
+.unlike.addl.on { color: var(--ink) }
+
+/* the list picker */
+.list-pop { position: fixed; z-index: var(--z-over-overlay); width: 230px; max-width: calc(100vw - 12px); padding: 6px; background: var(--bg); border: 1px solid var(--ink); box-shadow: var(--glow); font-size: var(--fs-s) }
+.lp-h { display: flex; justify-content: space-between; align-items: center; margin: 0 0 4px; font-family: var(--f-dot); font-size: var(--fs-xs); letter-spacing: .12em; color: var(--dim) }
+.lp-l { max-height: 190px; overflow-y: auto; margin: 0 0 6px }
+.lp-l .note { margin: 2px 0 }
+.lp-i { display: flex; align-items: baseline; gap: 6px; width: 100%; padding: 3px 4px; background: none; border: 0; color: var(--dim); font: inherit; text-align: left; cursor: var(--cur-hand, pointer) }
+.lp-i span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.lp-i i { font-style: normal; opacity: .6; font-size: var(--fs-xs) }
+.lp-i b { font-weight: normal }
+.lp-i:hover, .lp-i.on { color: var(--ink) }
+.lp-n { margin: 0 }

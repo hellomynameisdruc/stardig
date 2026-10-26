@@ -2,7 +2,7 @@
 import type { Vec } from "../core/types";
 import { $, uiZoom } from "../core/dom";
 import { galaxy, sameSel, state } from "../app/state";
-import { digBelt, endPick, goHome, next, pickBlocked, select, toggleBeacon, warp, zoomBy } from "../app/actions";
+import { digBelt, endPick, goHome, next, pickBlocked, prev, select, toggleBeacon, warp, zoomBy } from "../app/actions";
 import { cam } from "../render/camera";
 import { sc } from "../render/palette";
 import { pick } from "../render/picker";
@@ -10,6 +10,7 @@ import { sceneCanvas } from "../render/scene";
 import { denyCursor, lockCursor } from "./cursors";
 import { player } from "./dock";
 import { closeSearch, searchInput } from "./search";
+import { listPickerFor } from "./listPicker";
 
 export function initInput() {
   const cv = sceneCanvas();
@@ -59,8 +60,13 @@ export function initInput() {
     if (k === "/") { e.preventDefault(); searchInput().focus(); }
     else if (k === "w" || k === "ц") warp();
     else if (k === "h" || k === "р") goHome();
-    else if (k === "n" || k === "т") next();
+    else if (k === "n" || k === "т" || e.key === "ArrowRight") { e.preventDefault(); next(); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
     else if (k === "d" || k === "в") { const si = sel ? (sel.kind === "planet" ? galaxy.planets[sel.p].s : sel.s) : state.nowPlaying?.s; if (si !== undefined) digBelt(si); }
+    else if ((k === "l" || k === "д") && e.shiftKey) {
+      const r = sel?.kind === "track" ? sel : state.nowPlaying, at = document.querySelector<HTMLElement>("#dosActs [data-lists]");
+      listPickerFor(at && sel?.kind === "track" ? at : !$("playerBox").hidden ? $("pList") : searchInput(), r);
+    }
     else if (k === "l" || k === "д") toggleBeacon(sel?.kind === "track" ? sel : state.nowPlaying);
     else if (k === " ") { e.preventDefault(); player.toggle(); }
     else if (k === "+" || k === "=") zoomBy(1.5);

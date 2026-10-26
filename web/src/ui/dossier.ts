@@ -16,6 +16,7 @@ import { shareTrack } from "./share";
 import { provide } from "../app/ports";
 import { say } from "./rail";
 import { lockDossier } from "./beta";
+import { listPickerFor } from "./listPicker";
 
 let dosAnim: ((t: number) => void) | null = null;
 /** objects behind data-r buttons of the current render */
@@ -153,6 +154,7 @@ function track(o: { kind: "track"; s: number; i: number }) {
       <div class="scope-c"><canvas id="wave"></canvas></div>
       ${g.meta.sample ? `<p class="note">TEST SIGNAL: videos won't play.</p>` : `<button class="play" data-r="${R(o)}" data-play="1">${isNowPlaying(o.s, o.i) ? "◉ ON AIR" : "▶ PLAY"}</button>`}
       <button class="plot like${on ? " on" : ""}" data-like="1">${beaconLabel(on)}</button>
+      <button class="plot like lists" data-lists="1" aria-haspopup="true" title="Put this track in one of your lists (⇧L)">${ICON.list}<span>ADD TO LIST</span></button>
       <div class="outs"><button type="button" class="out" data-share="copy" title="Copy a link to this track">COPY LINK ⧉</button><button type="button" class="out" data-share="send" title="Post this track to COMMS, as a card">SEND TO COMMS ⇪</button><a class="out" href="https://www.youtube.com/watch?v=${esc(yt)}" target="_blank" rel="noopener">OPEN ON YOUTUBE ↗</a></div>
       ${near.length ? `<div><div class="ph-sub">NEAREST SIGNALS</div><div class="list">${near.map((r, k) => trackItem(r.s, r.i, k + 1)).join("")}</div></div>` : ""}`,
   };
@@ -201,6 +203,7 @@ export function initDossier() {
     const po = t.closest<HTMLElement>("[data-orbit]"); if (po) { playOrbit(+po.dataset.orbit!); return; }
     const sf = t.closest<HTMLElement>("[data-shuffle]"); if (sf) { reshuffle(+sf.dataset.shuffle!); renderDossier(); return; }
     const dg = t.closest<HTMLElement>("[data-dig]"); if (dg) { digBelt(+dg.dataset.dig!); return; }
+    const ls = t.closest<HTMLElement>("[data-lists]"); if (ls) { if (state.sel?.kind === "track") listPickerFor(ls, state.sel); return; }
     if (t.closest("[data-like]")) { if (state.sel?.kind === "track") toggleBeacon(state.sel); return; }
     const sh = t.closest<HTMLElement>("[data-share]"); if (sh) { if (state.sel?.kind === "track") shareTrack(state.sel, sh.dataset.share as "copy" | "send", sh); return; }
     const b = t.closest<HTMLElement>("[data-r]"); if (!b) return;

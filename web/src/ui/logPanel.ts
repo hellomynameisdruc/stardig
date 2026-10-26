@@ -2,6 +2,8 @@
 import { esc, pad } from "../core/util";
 import { $ } from "../core/dom";
 import { beacons, chunk, flightLog, galaxy, tracks } from "../app/state";
+import { type Beacon, MAX_LISTS } from "../store/beacons";
+import { openListPicker } from "./listPicker";
 import { select } from "../app/actions";
 import { locateYt } from "../app/vault";
 import { openComms } from "./comms";
@@ -41,17 +43,37 @@ export function renderLog() {
     : `<p class="note">NOTHING PLAYED ON THIS FLIGHT YET. SIGNALS YOU PLAY WILL SHOW UP HERE.</p>`;
 }
 
+// BEACONS: every track you set a beacon on, and your lists of them. The chips switch between ALL and
+// a list; while a list is open, new beacons go into it too.
+let shown: Beacon[] = [], edit: "" | "new" | "rename" | "delete" = "";
 export function renderBeacons() {
+  drawBeacons();
+  if (edit === "new" || edit === "rename") { const i = $("liked").querySelector<HTMLInputElement>(".bl-name input"); if (i && document.activeElement !== i) { i.focus(); i.select(); } }
+}
+function drawBeacons() {
   const el = $("liked");
   $("likedN").textContent = String(beacons.size);
   if (el.hidden) return;
-  if (!beacons.size) { el.innerHTML = `<p class="note">NO BEACONS YET. SET ONE ON A TRACK YOU LOVE: THE BEACON KEY OR <kbd>L</kbd>.</p>`; return; }
-  const parts = beacons.playlistLinks();
-  const links = parts.map((href, k) => `<a class="ytlist" href="${href}" target="_blank" rel="noopener">▶ OPEN AS YOUTUBE PLAYLIST${parts.length > 1 ? ` · PART ${k + 1}/${parts.length}` : ""} ↗</a>`).join("");
-  el.innerHTML = links + `<p class="note ythint">Opens on YouTube; use “Save” there to keep it in your library.</p>` +
-    beacons.all.map((b, k) => {
-      const style = b.st ?? galaxy.stars[b.s]?.name ?? "";
-      return `<div class="lk"><button data-bk="${k}"><time>${pad(k + 1, 2)}</time><span title="${esc(`${b.a ?? ""} — ${b.t ?? ""}`)}">▸ ${esc(b.a ?? "")} — ${esc(b.t ?? "")}${style ? ` · ${esc(style.toUpperCase())}` : ""}</span></button><button class="unlike" data-y="${esc(b.y)}" aria-label="Remove beacon">×</button></div>`;
+  const cur = beacons.current, list = beacons.getList(cur);
+  const chip = (id: string, name: string, n: number) => `<button type="button" class="bl-c${id === cur ? " on" : ""}" data-bl="${esc(id)}" aria-pressed="${id === cur}">${esc(name.toUpperCase())} <b>${n}</b></button>`;
+  const naming = edit === "new" || edit === "rename";
+  const chips = `<div class="bl-tabs" role="toolbar" aria-label="Lists">${chip("", "ALL", beacons.size)}${beacons.lists.map((l) => chip(l.id, l.name, beacons.of(l.id).length)).join("")}` +
+    (naming ? "" : beacons.lists.length < MAX_LISTS ? `<button type="button" class="bl-c add" data-blnew title="Start a new list">＋ NEW LIST</button>` : "") + `</div>` +
+    (naming ? `<form class="bl-name"><input maxlength="32" value="${edit === "rename" && list ? esc(list.name) : ""}" placeholder="${edit === "new" ? "NAME THE LIST: NIGHT DRIVE, WARM-UP…" : "NEW NAME"}" aria-label="List name"><button type="submit" class="key sm">${edit === "new" ? "CREATE" : "RENAME"}</button><button type="button" class="key sm" data-blcancel>CANCEL</button></form>` : "") +
+    (list && !naming ? `<div class="bl-bar"><span>NEW BEACONS GO HERE</span>${edit === "delete"
+      ? `<button type="button" class="link warn" data-bldel>DELETE “${esc(list.name.toUpperCase())}”? YES</button><button type="button" class="link" data-blcancel>NO</button>`
+      : `<button type="button" class="link" data-blren>✎ RENAME</button><button type="button" class="link" data-bldel>× DELETE LIST</button>`}</div>` : "");
+  shown = beacons.of(cur);
+  if (!beacons.size) { el.innerHTML = chips + `<p class="note">NO BEACONS YET. SET ONE ON A TRACK YOU LOVE: THE BEACON KEY OR <kbd>L</kbd>. <kbd>⇧L</kbd> PUTS IT IN A LIST.</p>`; return; }
+  if (!shown.length) { el.innerHTML = chips + `<p class="note">THIS LIST IS EMPTY. ADD TRACKS WITH ＋ NEXT TO A BEACON (IN ALL), THE LIST KEY IN THE PLAYER, OR <kbd>⇧L</kbd>. WHILE IT'S OPEN, NEW BEACONS LAND HERE.</p>`; return; }
+  const parts = beacons.playlistLinks(cur);
+  const links = parts.map((href, k) => `<a class="ytlist" href="${href}" target="_blank" rel="noopener">▶ OPEN ${list ? `“${esc(list.name.toUpperCase())}”` : "ALL"} AS YOUTUBE PLAYLIST${parts.length > 1 ? ` · PART ${k + 1}/${parts.length}` : ""} ↗</a>`).join("");
+  el.innerHTML = chips + links + `<p class="note ythint">Opens on YouTube; use “Save” there to keep it in your library.</p>` +
+    shown.map((b, k) => {
+      const style = b.st ?? galaxy.stars[b.s]?.name ?? "", n = beacons.lists.filter((l) => l.ys.includes(b.y)).length;
+      return `<div class="lk"><button data-bk="${k}"><time>${pad(k + 1, 2)}</time><span title="${esc(`${b.a ?? ""} — ${b.t ?? ""}`)}">▸ ${esc(b.a ?? "")} — ${esc(b.t ?? "")}${style ? ` · ${esc(style.toUpperCase())}` : ""}</span></button>` +
+        `<button class="unlike addl${n ? " on" : ""}" data-lp="${esc(b.y)}" aria-haspopup="true" aria-label="Lists" title="${n ? `In ${n} ${n === 1 ? "list" : "lists"}. ` : ""}Put it in a list">${n ? "■" : "＋"}</button>` +
+        `<button class="unlike" data-y="${esc(b.y)}" aria-label="${list ? "Take out of this list" : "Remove beacon"}" title="${list ? "Take out of this list (the beacon stays)" : "Remove the beacon (and from every list)"}">×</button></div>`;
     }).join("");
 }
 
@@ -96,11 +118,25 @@ export function initLogPanel() {
   initGrip();
   $("log").addEventListener("click", (e) => { const b = (e.target as HTMLElement).closest<HTMLElement>("[data-log]"); const r = b && logRefs[+b.dataset.log!]; if (r) go(r, b!); });
   $("liked").addEventListener("click", (e) => {
-    const u = (e.target as HTMLElement).closest<HTMLElement>("[data-y]");
-    if (u) { beacons.remove(u.dataset.y!); return; }
+    const t = e.target as HTMLElement, cur = beacons.current;
+    const c = t.closest<HTMLElement>("[data-bl]"); if (c) { edit = ""; beacons.setCurrent(c.dataset.bl!); return; }
+    if (t.closest("[data-blnew]")) { edit = "new"; renderBeacons(); return; }
+    if (t.closest("[data-blren]")) { edit = "rename"; renderBeacons(); return; }
+    if (t.closest("[data-blcancel]")) { edit = ""; renderBeacons(); return; }
+    if (t.closest("[data-bldel]")) { if (edit === "delete") { edit = ""; beacons.deleteList(cur); } else { edit = "delete"; renderBeacons(); } return; }
+    const lp = t.closest<HTMLElement>("[data-lp]"); if (lp) { openListPicker(lp, lp.dataset.lp!, () => undefined); return; }
+    const u = t.closest<HTMLElement>("[data-y]");
+    if (u) { if (cur) beacons.toggleIn(cur, u.dataset.y!); else beacons.remove(u.dataset.y!); return; }
     const b = (e.target as HTMLElement).closest<HTMLElement>("[data-bk]"), bk = b && beacons.all[+b.dataset.bk!];
     if (bk) go({ s: bk.s, i: bk.i, y: bk.y, st: bk.st }, b!);
   });
+  $("liked").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const v = (e.target as HTMLElement).querySelector<HTMLInputElement>("input")?.value ?? "";
+    if (edit === "new") { const id = beacons.createList(v); if (!id) return; edit = ""; beacons.setCurrent(id); }
+    else if (edit === "rename") { if (!v.trim()) return; edit = ""; beacons.renameList(beacons.current, v); }
+  });
+  $("liked").addEventListener("keydown", (e) => { if (e.key === "Escape" && edit) { e.stopPropagation(); edit = ""; renderBeacons(); } });
   $("tabLog").onclick = () => showTab("log");
   $("tabLiked").onclick = () => showTab("liked");
   $("tabComms").onclick = () => showTab("comms");
