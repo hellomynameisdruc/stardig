@@ -7,7 +7,7 @@
 import { beacons } from "../app/state";
 
 /** the site's Google sign-in client (a public id, not a secret). Empty: the feature stays hidden. */
-export const GOOGLE_CLIENT_ID = "";
+export const GOOGLE_CLIENT_ID = "2800189413-srtqe3cg5ba844u7u247nsrmquh6iubd.apps.googleusercontent.com";
 const SCOPE = "https://www.googleapis.com/auth/youtube";
 const API = "https://www.googleapis.com/youtube/v3";
 
