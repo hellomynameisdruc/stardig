@@ -306,12 +306,12 @@ create trigger welcome_pilot after update of access on public.pilots for each ro
 -- the founder speaks as SYSTEM (/sys, /tip, /pilots, /welcome)
 create or replace function public.system_say(body text) returns bigint
 language plpgsql security definer set search_path = public as $$
-declare id bigint;
+declare said bigint;
 begin
-  if not exists (select 1 from public.pilots where id = auth.uid() and admin) then raise exception 'NOT AUTHORISED'; end if;
+  if not exists (select 1 from public.pilots p where p.id = auth.uid() and p.admin) then raise exception 'NOT AUTHORISED'; end if;
   if body is null or char_length(trim(body)) = 0 then raise exception 'EMPTY'; end if;
-  insert into public.messages (pilot, room, body) values (null, 'all', left(trim(body), 400)) returning messages.id into id;
-  return id;
+  insert into public.messages (pilot, room, body) values (null, 'all', left(trim(body), 400)) returning messages.id into said;
+  return said;
 end $$;
 revoke execute on function public.system_say(text) from public, anon;
 grant execute on function public.system_say(text) to authenticated;
