@@ -55,6 +55,10 @@ export function initInput() {
     const typing = (e.target as HTMLElement).tagName === "INPUT", sel = state.sel;
     if (e.key === "Escape" && state.routePick !== null) { endPick(); return; }
     if (e.key === "Escape") { if (typing) { closeSearch(); return; } if (sel?.kind === "track") select({ kind: "star", s: sel.s }); else if (sel) select(null); return; }
+    // media keys reach the page as these when the system doesn't take them (F7–F9 with fn on a Mac)
+    if (e.key === "MediaTrackNext" || e.key === "F9") { e.preventDefault(); next(); return; }
+    if (e.key === "MediaTrackPrevious" || e.key === "F7") { e.preventDefault(); prev(); return; }
+    if (e.key === "MediaPlayPause" || e.key === "F8") { e.preventDefault(); player.toggle(); return; }
     if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
     const k = e.key.toLowerCase();
     if (k === "/") { e.preventDefault(); searchInput().focus(); }

@@ -84,7 +84,22 @@ export function loadInDock(ref: TrackRef) {
   player.play(ch.yt[ref.i]);
   paintBeaconKey(); paintOdysseyTag();
   $("npTitle").textContent = ch.t[ref.i]; $("npArtist").textContent = ch.an[ch.a[ref.i]];
+  mediaKeys(ch.t[ref.i], ch.an[ch.a[ref.i]], ch.yt[ref.i]);
   seekEl.value = "0"; paintRange(seekEl); $("tCur").textContent = "0:00"; $("tDur").textContent = "0:00";
+}
+
+/** the keyboard's media keys (⏮ ⏯ ⏭, F7–F9 on a Mac) and the system's now-playing panel drive the player */
+let mediaOn = false;
+function mediaKeys(title: string, artist: string, yt: string) {
+  const ms = "mediaSession" in navigator ? navigator.mediaSession : null; if (!ms) return;
+  try {
+    ms.metadata = new MediaMetadata({ title, artist, album: "stardig", artwork: [{ src: `https://i.ytimg.com/vi/${yt}/hqdefault.jpg`, sizes: "480x360", type: "image/jpeg" }] });
+    if (mediaOn) return; mediaOn = true;
+    ms.setActionHandler("nexttrack", () => next());
+    ms.setActionHandler("previoustrack", () => prev());
+    ms.setActionHandler("play", () => { if (!player.playing) player.toggle(); });
+    ms.setActionHandler("pause", () => { if (player.playing) player.toggle(); });
+  } catch { /* an action this browser doesn't know */ }
 }
 
 /** plays a single video through the transport (test hook #test-<id>) */
