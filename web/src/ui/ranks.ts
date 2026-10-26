@@ -11,7 +11,7 @@ export const RANKS: Record<string, { label: string; color: string; badge: string
   admiral: { label: "STAR ADMIRAL", color: "#ff9f43", badge: "★" },
   dj: { label: "DJ", color: "#ff6ad5", badge: "♫" },
   digger: { label: "DIGGER", color: "#b8f35a", badge: "◎" },
-  warden: { label: "WARDEN", color: "#ff5c5c", badge: "⚑" },
+  warden: { label: "WARDEN", color: "#b18cff", badge: "⚑" },
   founder: { label: "ARCHITECT", color: "#ffe066", badge: "✸" },
 };
 /** the earned ladder: each rank and what it takes — flights logged OR ore mined */
