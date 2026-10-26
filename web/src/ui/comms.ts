@@ -13,7 +13,7 @@ import { fleet, fleetRoom, inviteLink, known, leave, onFleet, tuneIn, watchOnAir
 import { chunk, galaxy } from "../app/state";
 import { select } from "../app/actions";
 import { find, parseSignal, placed, withoutSignal } from "../app/signal";
-import { avatarSvg } from "./avatar";
+import { avatarSvg, systemAvatarSvg } from "./avatar";
 import { openPilot } from "./pilot";
 import { EARNED, GIVEN, isStaff, rankKey, rankOf, rankTag, RANKS } from "./ranks";
 import { flashKey, say } from "./rail";
@@ -86,7 +86,13 @@ function fleetCard(hostId: string, nick?: string) {
     <span class="fc-m">${esc(live.style.toUpperCase())} · ${n + 1} ${n === 0 ? "PILOT" : "PILOTS"} ABOARD</span></span>${key}</button>`;
 }
 const looked = new Set<string>();
+/** a word from the station itself: a new pilot in the ranks */
+function sysLine(m: Msg) {
+  const act = pilot.me && isStaff(pilot.me) ? `<button class="m-x" data-del="${m.id}" aria-label="Delete the message" title="Delete">×</button>` : "";
+  return `<div class="msg sys" data-mid="${m.id}">${systemAvatarSvg(32)}<div class="m-b"><span class="m-h"><span class="rk" style="--rk:var(--ink)" title="The station">◆ SYS</span><b class="sys-n">SYSTEM</b><time>${time(m.created_at)}</time>${act}</span><span class="m-t">${esc(m.body)}</span>${reactionRow(m)}</div></div>`;
+}
 function line(m: Msg) {
+  if (!m.pilot) return sysLine(m);
   const p = roster.get(m.pilot), mine = m.pilot === pilot.me?.id;
   const act = !pilot.me ? "" : mine || isStaff(pilot.me)
     ? `<button class="m-x" data-del="${m.id}" aria-label="Delete the message" title="Delete">×</button>`
@@ -96,7 +102,7 @@ function line(m: Msg) {
 /** what a message answers: a line quoting it (a click scrolls to it) */
 function quote(m: Msg) {
   if (!m.reply_to) return "";
-  const q = messageById(m.reply_to), who = q ? roster.get(q.pilot)?.nick ?? "PILOT" : "";
+  const q = messageById(m.reply_to), who = !q ? "" : !q.pilot ? "SYSTEM" : roster.get(q.pilot)?.nick ?? "PILOT";
   return `<button type="button" class="m-q" data-goto="${m.reply_to}">↩ ${q ? `<b>${esc(who.toUpperCase())}</b> ${esc(snippet(q.body))}` : "AN EARLIER MESSAGE"}</button>`;
 }
 /** a message in a few words: a shared track by its title */
@@ -125,7 +131,7 @@ function paintReply() {
   const q = replyTo ? messageById(replyTo) : null;
   if (!q) { replyTo = null; bar.hidden = true; return; }
   bar.hidden = false;
-  bar.innerHTML = `<span>↩ REPLYING TO <b>${esc((roster.get(q.pilot)?.nick ?? "PILOT").toUpperCase())}</b> · ${esc(snippet(q.body))}</span><button type="button" class="key icon sm" data-unreply aria-label="Cancel the reply">×</button>`;
+  bar.innerHTML = `<span>↩ REPLYING TO <b>${esc((!q.pilot ? "SYSTEM" : roster.get(q.pilot)?.nick ?? "PILOT").toUpperCase())}</b> · ${esc(snippet(q.body))}</span><button type="button" class="key icon sm" data-unreply aria-label="Cancel the reply">×</button>`;
 }
 function airList() {
   if (!fleet.hosts.length) return `<p class="note">NOBODY IS BROADCASTING RIGHT NOW. START ONE WITH <span class="ico-in">${ICON.cast}</span> IN THE PLAYER.</p>`;

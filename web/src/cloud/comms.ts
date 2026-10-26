@@ -11,7 +11,8 @@ const KEEP = 80;
 export const HISTORY_MS = 24 * 3600 * 1000;
 const since = () => new Date(Date.now() - HISTORY_MS).toISOString();
 /** reply_to: the message this one answers */
-export type Msg = { id: number; pilot: string; body: string; created_at: string; room?: string; reply_to?: number | null };
+/** pilot null: the station itself (SYSTEM), e.g. welcoming a new pilot */
+export type Msg = { id: number; pilot: string | null; body: string; created_at: string; room?: string; reply_to?: number | null };
 /** the message columns to read; without replies if the database hasn't got them yet */
 let MCOLS = "id,pilot,body,created_at,room,reply_to";
 const dropReplies = (msg: string) => { if (/reply_to/.test(msg) && MCOLS.endsWith(",reply_to")) { MCOLS = "id,pilot,body,created_at,room"; return true; } return false; };
@@ -73,7 +74,7 @@ export async function loadRoom(r: string) {
   await loadReactions(((data ?? []) as unknown as Msg[]).map((m) => m.id)).catch(() => {});
   for (const m of ((data ?? []) as unknown as Msg[]).reverse()) add({ ...m, room: r });
   bucket(r).sort((a, b) => a.id - b.id);
-  await lookup(bucket(r).map((m) => m.pilot)).catch(() => {});
+  await lookup(bucket(r).flatMap((m) => (m.pilot ? [m.pilot] : []))).catch(() => {});
   emit({ kind: "loaded", room: r }); return true;
 }
 /** leaving a room (a fleet broke up): forget it */
@@ -86,7 +87,7 @@ export async function goLive(want: (room: string) => boolean) {
   live = sb.channel("comms:live", { config: { private: true } })
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, async (e) => {
       const m = e.new as Msg; if (!m.room || !wanted(m.room)) return;
-      await lookup([m.pilot]).catch(() => {});
+      if (m.pilot) await lookup([m.pilot]).catch(() => {});
       if (add(m)) emit({ kind: "new", room: m.room, msg: m });
     })
     .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, (e) => {

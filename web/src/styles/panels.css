@@ -161,3 +161,8 @@
 .lp-n { margin: 0 }
 button.ytlist { width: 100%; background: none; text-align: left; cursor: var(--cur-hand, pointer) }
 button.ytlist:disabled { cursor: default; opacity: .8; animation: flicker 2s infinite }
+/* SYSTEM: the station speaks (a new pilot in the ranks) */
+.msg.sys { padding: 4px 6px; border: 1px dashed var(--line); background: var(--wash) }
+.msg.sys .ava { color: var(--ink) }
+.msg.sys .sys-n { color: var(--ink); letter-spacing: .12em }
+.msg.sys .m-t { font-family: var(--f-dot); letter-spacing: .06em; text-shadow: var(--glow) }
