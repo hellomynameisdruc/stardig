@@ -6,7 +6,7 @@
 import { esc, pad } from "../core/util";
 import { $ } from "../core/dom";
 import { ALL, clearInvites, dropRoom, goLive, grantRank, loadRoom, messageById, messages, onComms, REACTIONS, reactionsOf, remove, report, systemSay, toggleReaction, transmit, type Msg } from "../cloud/comms";
-import { approveAll, crewCount, grantAccess, lookup, makeInvite, onPilot, pilot, roster, waitingPilots, wake } from "../cloud/pilots";
+import { approveAll, crewCount, grantAccess, newPortrait, lookup, makeInvite, onPilot, pilot, roster, waitingPilots, wake } from "../cloud/pilots";
 import { setCrew } from "./ticker";
 import { beta } from "../app/beta";
 import { ui } from "../app/ports";
@@ -207,7 +207,7 @@ async function send() {
 /** the console: /ranks lists them; /rank CALLSIGN RANK (the founder) gives one */
 async function command(text: string) {
   const inp = $<HTMLInputElement>("commsIn"), [cmd, nick, ...rest] = text.slice(1).trim().split(/\s+/);
-  if (cmd === "ranks" || cmd === "help") { inp.value = ""; tell(`Earned by digging: ${EARNED.map((e) => RANKS[e.rank].label).join(" › ")}. Given by the founder: ${GIVEN.map((k) => RANKS[k].label).join(" · ")} (/rank CALLSIGN RANK). Closed beta: /waiting · /approve CALLSIGN · /approve all · /revoke CALLSIGN · /invite [PILOTS]. SYSTEM: /sys TEXT · /tip [STYLE] · /pilots · /welcome CALLSIGN`, "info"); return; }
+  if (cmd === "ranks" || cmd === "help") { inp.value = ""; tell(`Earned by digging: ${EARNED.map((e) => RANKS[e.rank].label).join(" › ")}. Given by the founder: ${GIVEN.map((k) => RANKS[k].label).join(" · ")} (/rank CALLSIGN RANK). Closed beta: /waiting · /approve CALLSIGN · /approve all · /revoke CALLSIGN · /invite [PILOTS]. SYSTEM: /sys TEXT · /tip [STYLE] · /pilots · /welcome CALLSIGN. Your portrait: /avatar beard · /avatar back`, "info"); return; }
   // the closed beta (the founder): let a pilot in or out, make an invite code
   if (cmd === "waiting") { inp.value = ""; await showWaiting(); return; }
   if (cmd === "approve" && nick?.toLowerCase() === "all") {
@@ -247,6 +247,14 @@ async function command(text: string) {
     const e = await systemSay(out);
     if (e) { tell(e === "not-authorised" ? "Only the founder speaks as SYSTEM" : e === "missing" ? "SYSTEM can't speak yet: run stardig-system.sql in Supabase" : `Failed: ${e}`); return; }
     inp.value = ""; note = null; paint(); return;
+  }
+  // a pilot's own look: the same portrait with black hair and a beard (a negative avatar number), or back
+  if (cmd === "avatar") {
+    const me = pilot.me!, want = (nick ?? "").toLowerCase(), cur = me.avatar || 1;
+    if (want !== "beard" && want !== "back") { tell("/avatar beard: black hair and a beard · /avatar back: as it was", "info"); return; }
+    const e = await newPortrait(want === "beard" ? -Math.abs(cur) : Math.abs(cur));
+    if (e) { tell(`Failed: ${e}`); return; }
+    inp.value = ""; note = null; paint(); say(want === "beard" ? "New look: black hair and a beard" : "Your portrait is as it was"); return;
   }
   if (cmd !== "rank" || !nick || !rest.length) { tell("Unknown command. Try /ranks"); return; }
   const r = rankKey(rest.join(" ")); if (!r) { tell(`No such rank. ${Object.keys(RANKS).join(" · ")}`); return; }

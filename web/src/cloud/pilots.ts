@@ -82,9 +82,9 @@ export async function setNick(nick: string) {
   if (error) return error.code === "23505" ? "taken" : error.message;
   me.nick = nick; pilotChanged(); return null;
 }
-export async function newPortrait() {
+export async function newPortrait(keep?: number) {
   const me = pilot.me; if (!me) return "signed-out";
-  const avatar = Math.floor(Math.random() * 2147483647);
+  const avatar = keep ?? Math.floor(Math.random() * 2147483647);
   const { error } = await (await cloud()).from("pilots").update({ avatar }).eq("id", me.id);
   if (error) return error.message;
   me.avatar = avatar; pilotChanged(); return null;

@@ -10,7 +10,11 @@ type T = 0 | 1 | 2 | 3;
 
 export type Portrait = { tone: Int8Array; traits: string[] };
 
-export function portrait(seed: number): Portrait {
+/** a pilot's own look, kept by the sign of the avatar number: a negative one is the same portrait with
+ *  black hair (under any headset) and a beard. Pilots set it in COMMS: /avatar beard (and /avatar back) */
+export const customLook = (avatar: number) => avatar < 0;
+export function portrait(avatar: number): Portrait {
+  const custom = avatar < 0, seed = custom ? -avatar : avatar;
   const rnd = mulberry(seed * 2654435761 + 7);
   const pick = <V,>(opts: [V, number][]): V => { let s = opts.reduce((a, o) => a + o[1], 0) * rnd(); for (const [v, w] of opts) if ((s -= w) < 0) return v; return opts[0][0]; };
   const chance = (p: number) => rnd() < p;
@@ -28,14 +32,15 @@ export function portrait(seed: number): Portrait {
   const top = pick<string>(species === "alien"
     ? [["antennae", 35], ["bald", 20], ["bubble helmet", 15], ["hood", 12], ["headset", 10], ["mohawk", 8]]
     : [["short hair", 18], ["long hair", 12], ["buzz cut", 10], ["mohawk", 7], ["bun", 7], ["curls", 9], ["cap", 8], ["headset", 10], ["bubble helmet", 9], ["hood", 6], ["goggles", 4]]);
-  const hairT = pick<T>([[1, 60], [3, 25], [2, 15]]);
+  let hairT = pick<T>([[1, 60], [3, 25], [2, 15]]);
   const eyes = pick<string>(species === "alien" ? [["big eyes", 60], ["three eyes", 25], ["visor", 15]]
     : species === "android" ? [["cyber eye", 55], ["visor", 30], ["shades", 15]]
     : [["calm eyes", 34], ["side glance", 18], ["tired eyes", 12], ["glasses", 16], ["shades", 12], ["visor", 8]]);
-  const mouth = pick<string>(species === "android" ? [["grille", 70], ["flat", 30]]
+  let mouth = pick<string>(species === "android" ? [["grille", 70], ["flat", 30]]
     : [["flat", 32], ["smile", 26], ["open", 10], ["moustache", 10], ["beard", 14], ["smirk", 8]]);
   const outfit = pick<string>([["flight suit", 30], ["jacket", 20], ["hoodie", 18], ["turtleneck", 16], ["tee", 16]]);
   const clothT = pick<T>([[1, 40], [2, 40], [3, 20]]);
+  if (custom) { hairT = 1; if (species !== "android") mouth = "beard"; }
   const extras = [chance(0.18) && "earring", chance(0.12) && "star tattoo", chance(0.14) && species !== "android" && "freckles", chance(0.08) && "scar"].filter(Boolean) as string[];
 
   // —— backdrop
@@ -88,7 +93,7 @@ export function portrait(seed: number): Portrait {
   const cut = pick<string>([["straight", 3], ["swept", 4], ["parted", 3]]), part = 11 + Math.floor(rnd() * 10), flip = chance(0.5);
   const fringe = Array.from({ length: N }, (_, x) => { const u = flip ? N - 1 - x : x, j = Math.floor(rnd() * 2);
     return cut === "straight" ? j : cut === "swept" ? Math.min(2, Math.round((u - 8) * 0.3) - 3) + j : Math.min(1, Math.round(Math.abs(x - part) * 0.4) - 3) + j; });
-  if (top === "short hair" || top === "bun" || top === "long hair") {
+  if (top === "short hair" || top === "bun" || top === "long hair" || (custom && ["headset", "bald", "buzz cut"].includes(top))) {
     hairBox(1, 0.9, (x, y, d) => d <= 1 && (y < ey - 3 + fringe[x] || (y < ey && Math.abs(x + 0.5 - 16) > rx - 0.6)));
     if (top === "long hair") hairBox(2, 2, (x, y, d) => (d <= 1 || y > cy) && y < 28 && Math.abs(x + 0.5 - 16) > rx - 0.6 && Math.abs(x + 0.5 - 16) < rx + 2.5 && y >= headTop + 2);
     if (top === "bun") for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (Math.hypot(x + 0.5 - 16, y + 0.5 - (headTop - 1)) <= 3) put(x, y, hairT, HAIR);
