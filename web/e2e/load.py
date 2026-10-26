@@ -74,7 +74,7 @@ def socket(ws):  # the realtime line: accept every join, say nothing more
     ws.on_message(on)
 
 
-INIT = ("localStorage.setItem('kosmos-briefed','1');"
+INIT = ("localStorage.setItem('kosmos-briefed','1');localStorage.setItem('kosmos-mobile','1');"
         f"localStorage.setItem('kosmos-log2', {json.dumps(json.dumps(log))});"
         f"localStorage.setItem('kosmos-likes', {json.dumps(json.dumps(likes))});"
         "window.__lt=[];new PerformanceObserver(l=>{for(const e of l.getEntries())window.__lt.push([Math.round(e.startTime),Math.round(e.duration)])}).observe({type:'longtask',buffered:true});")

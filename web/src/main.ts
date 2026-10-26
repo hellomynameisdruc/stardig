@@ -1,8 +1,5 @@
-// stardig — entry point. Modules only define things; everything is started here, in order.
-//   core/    types and helpers          model/  galaxy, motion, routes (pure, tested)
-//   data/    fetching the map           store/  beacons, flight log, prefs (behind a storage adapter)
-//   app/     shared state and actions   render/ camera, layers, what's drawn on the map
-//   ui/      dossier, player dock, route panel, log, search, input, effects
+// stardig — entry point. The observatory is made for a computer: on a phone, for now, a card says so and
+// nothing else loads (no map, no tracks). ?mobile=1 lets this device in anyway (remembered).
 // Fonts ship with the site (latin + cyrillic only)
 import "@fontsource/dotgothic16/latin-400.css";
 import "@fontsource/dotgothic16/latin-ext-400.css";
@@ -14,95 +11,35 @@ import "@fontsource/martian-mono/cyrillic-400.css";
 import "@fontsource/martian-mono/latin-600.css";
 import "@fontsource/martian-mono/cyrillic-600.css";
 import "./style.css";
-import { $, reduce, setMotion, systemStill } from "./core/dom";
-import { beacons, flightLog, galaxy, state, tracks } from "./app/state";
-import { routeFromHash, select } from "./app/actions";
-import { find, parseSignal } from "./app/signal";
-import { initScene, startLoop } from "./render/scene";
-import { initDock, paintBeaconKey, playTestSignal } from "./ui/dock";
-import { initDossier, paintDossierBeacon, renderDossier } from "./ui/dossier";
-import { initRoutePanel } from "./ui/routePanel";
-import { initLogPanel, renderBeacons, renderLog } from "./ui/logPanel";
-import { initListPicker } from "./ui/listPicker";
-import { initClock, ticker } from "./ui/ticker";
-import { initSearch } from "./ui/search";
-import { initInput } from "./ui/input";
-import { initWormhole } from "./ui/wormhole";
-import { initTheme } from "./ui/theme";
-import { initBriefing } from "./ui/briefing";
-import { initPilot } from "./ui/pilot";
-import { initBeta } from "./ui/beta";
-import { initModals } from "./ui/modal";
-import { paintLogos } from "./ui/logo";
-import { initRail, setMode } from "./ui/rail";
-import { initComms } from "./ui/comms";
-import { initFleet } from "./ui/fleet";
-import { tuneIn } from "./cloud/fleet";
-import { initShareKey } from "./ui/share";
-import { initSync } from "./cloud/sync";
+import { logoHtml } from "./ui/logo";
 
-paintLogos();
-initModals();
-initRail();
-// the system's "Reduce motion" froze the map: say so, and offer it back
-if (reduce && systemStill) setMode("motion", "<b>MOTION OFF</b> · YOUR SYSTEM ASKS FOR REDUCED MOTION", [{ label: "TURN ON", run: () => setMotion(true), hot: true }], "mode", undefined, 1);
-initScene();
-initDock();
-initDossier();
-initRoutePanel();
-initLogPanel();
-initListPicker();
-initPilot();
-initBeta();
-initComms();
-initFleet();
-initShareKey();
-initSync();
-initSearch();
-initInput();
-initWormhole();
-initClock();
+const KEY = "kosmos-mobile";
+function letIn() {
+  try {
+    const q = new URLSearchParams(location.search).get("mobile");
+    if (q === "1") localStorage.setItem(KEY, "1"); else if (q === "0") localStorage.removeItem(KEY);
+    return localStorage.getItem(KEY) === "1";
+  } catch { return false; }
+}
+/** a phone: a touch screen whose short side is phone-sized (tablets and laptops pass) */
+const phone = () => typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 600;
 
-// stores tell the UI when they change
-beacons.changed.on(() => { renderBeacons(); paintBeaconKey(); paintDossierBeacon(); ticker(); state.dirty = true; });
-flightLog.changed.on(() => { renderLog(); ticker(); });
-
-initTheme();
-$("sector").textContent = galaxy.meta.sector.toUpperCase();
-if (galaxy.meta.sample) { const b = $("sampleBanner"); b.hidden = false; b.onclick = () => { b.hidden = true; }; }
-renderDossier(); renderLog(); renderBeacons(); paintBeaconKey(); ticker();
-startLoop();
-initBriefing();
-document.fonts?.ready.then(() => { state.dirty = true; });
-
-// deep links: #test-<videoId> plays one video, #r<a>-<b> opens a route, #t<star>-<track> a track
-const tm = location.hash.match(/^#test-([A-Za-z0-9_-]{11})$/);
-if (tm) playTestSignal(tm[1]);
-routeFromHash();
-// the COMMS page (comms.html) asks this tab to play a shared track or tune in to a fleet
-window.name = "sound-cosmos";
-if (typeof BroadcastChannel === "function") {
-  const bus = new BroadcastChannel("sound-cosmos");
-  bus.onmessage = (e) => {
-    const go = String(e.data?.go ?? "");
-    const s = parseSignal(go), f = go.match(/^#fleet-([\w-]{6,64})$/);
-    if (s) find(s).then((r) => { if (r) select({ kind: "track", ...r }, true, true); });
-    else if (f) tuneIn(f[1]);
-    else return;
-    bus.postMessage({ ack: go });
+function desktopOnly() {
+  const link = `${location.origin}/`;
+  document.body.className = "desk-only";
+  document.body.innerHTML = `<main class="desk-card" role="main">
+    <span class="inv logo">${logoHtml(1.6)}</span>
+    <p class="dk-k">OBSERVATORY // SIGNAL WEAK ON THIS SCREEN</p>
+    <h1>STARDIG IS MADE FOR A COMPUTER</h1>
+    <p>The map of electronic music needs a big screen and a keyboard: millions of tracks among the stars, the player beside them. The phone version is closed for now.</p>
+    <p class="dk-u">Open <b>${link.replace(/^https?:\/\//, "").replace(/\/$/, "")}</b> on your laptop or desktop.</p>
+    <button type="button" class="key" id="dkCopy">⧉ COPY THE LINK</button>
+    <p class="dk-c">hellomynameisdruc © 2026</p></main>`;
+  const b = document.getElementById("dkCopy")!;
+  b.onclick = async () => {
+    try { if (navigator.share) { await navigator.share({ title: "stardig", url: link }); return; } await navigator.clipboard.writeText(link); b.textContent = "COPIED ✓"; }
+    catch { b.textContent = link; }
   };
 }
-addEventListener("hashchange", () => {
-  if (routeFromHash()) return;
-  const s = parseSignal(location.hash); if (s) find(s).then((r) => { if (r) select({ kind: "track", ...r }); });
-  const f = location.hash.match(/^#fleet-([\w-]{6,64})$/); if (f) tuneIn(f[1]);
-});
-const sig = parseSignal(location.hash);
-if (sig) find(sig).then((r) => { if (r) select({ kind: "track", ...r }); });
-const m = location.hash.match(/^#t(\d+)-(\d+)$/);
-if (m && +m[1] < galaxy.stars.length) tracks.load(+m[1]).then((ch) => { if (+m[2] < ch.yt.length) select({ kind: "track", s: +m[1], i: +m[2] }); });
 
-// signature in the browser console
-console.log("%c stardig %c © 2026 hellomynameisdruc · all rights reserved · stardig.app",
-  "background:#b8a8ff;color:#0b0716;font-weight:bold;padding:2px 4px", "color:#b8a8ff");
-
+if (phone() && !letIn()) desktopOnly(); else import("./app");

@@ -56,3 +56,14 @@ body.modal-open .dock { border-color: var(--faint); box-shadow: none }
 .pl-next { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-xs); color: var(--dim); letter-spacing: .06em }
 .pl-next b { font-weight: 400 }
 .pl-next i { display: block; height: 4px; border: 1px solid var(--line); background: linear-gradient(90deg, var(--ink) var(--k), transparent var(--k)) }
+
+/* a phone, for now: the card that says stardig is made for a computer (main.ts) */
+body.desk-only { min-height: 100dvh; display: grid; place-items: center; padding: 24px 18px; background: var(--bg); color: var(--ink) }
+.desk-card { max-width: 420px; display: grid; gap: 14px; justify-items: start; padding: 22px 20px; border: 1px solid var(--line); box-shadow: var(--glow) }
+.desk-card .logo { padding: 4px 8px }
+.desk-card h1 { margin: 0; font-family: var(--f-dot); font-weight: normal; font-size: var(--fs-xxl); letter-spacing: .06em; line-height: 1.25; text-shadow: var(--glow) }
+.desk-card p { margin: 0; font-size: var(--fs-m); line-height: 1.6; color: var(--dim) }
+.desk-card .dk-k { font-family: var(--f-dot); font-size: var(--fs-xs); letter-spacing: .14em; color: var(--red-ink) }
+.desk-card .dk-u b { color: var(--ink); font-weight: 600 }
+.desk-card .key { padding: 8px 12px }
+.desk-card .dk-c { font-size: var(--fs-xs); color: var(--faint) }
