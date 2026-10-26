@@ -201,26 +201,27 @@ export function avatarSvg(seed: number, size = 48, cls = "ava") {
 }
 export const avatarTraits = (seed: number) => portrait(seed).traits;
 
-// The voice of the station itself (SYSTEM in COMMS): a robot head, its one eye the stardig burst, drawn
-// like the pilots' portraits (a lit backdrop, the figure outlined in the darkest tone).
+// The voice of the station itself (SYSTEM in COMMS): a robot head drawn in lit lines on the dark, its one
+// eye the stardig burst, so it reads at chat size and apart from the pilots' lit portraits.
 let sysRects = "";
 function systemRects() {
   if (sysRects) return sysRects;
-  const tone = new Int8Array(N * N).fill(3), put = (x: number, y: number, t: number) => { if (x >= 0 && y >= 0 && x < N && y < N) tone[y * N + x] = t; };
-  const box = (x0: number, y0: number, x1: number, y1: number, t: number, edge = true) => {
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(x, y, edge && (x === x0 || x === x1 || y === y0 || y === y1) ? 0 : t);
+  const tone = new Int8Array(N * N), put = (x: number, y: number, t: number) => { if (x >= 0 && y >= 0 && x < N && y < N) tone[y * N + x] = t; };
+  const box = (x0: number, y0: number, x1: number, y1: number, fillT: number, edgeT: number) => {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(x, y, x === x0 || x === x1 || y === y0 || y === y1 ? edgeT : fillT);
   };
-  for (const [x, y] of [[3, 4], [27, 5], [4, 25], [28, 24], [23, 2], [2, 12], [29, 13]]) put(x, y, 2); // stars
-  box(14, 0, 17, 3, 3); box(15, 3, 16, 8, 1);                        // the lamp and the antenna
-  box(2, 14, 6, 20, 1); box(25, 14, 29, 20, 1); box(3, 16, 4, 18, 3, false); box(27, 16, 28, 18, 3, false); // ears
-  box(5, 8, 26, 29, 1);                                              // the head
-  box(8, 11, 23, 22, 0, false);                                      // the visor
+  for (const [x, y] of [[3, 4], [27, 5], [2, 27], [29, 25], [24, 1], [6, 1]]) put(x, y, 1); // stars
+  box(14, 0, 17, 3, 3, 3);                                           // the lamp
+  box(15, 4, 16, 6, 2, 2);                                           // the antenna
+  box(2, 13, 5, 21, 1, 2); box(26, 13, 29, 21, 1, 2);                // ears
+  box(5, 7, 26, 29, 1, 3); box(6, 8, 25, 28, 1, 2);                  // the head, a double rim
+  box(8, 10, 23, 22, 0, 2);                                          // the visor
   for (let k = 0; k < 16; k++) {                                     // the eye: a burst of 16 rays
-    const a = (k / 16) * Math.PI * 2, len = k % 2 ? 3 : 5;
-    for (let r = 1.5; r <= len; r += 0.5) put(Math.round(15.5 + Math.cos(a) * r), Math.round(16.5 + Math.sin(a) * r), k % 2 ? 2 : 3);
+    const a = (k / 16) * Math.PI * 2, len = k % 2 ? 3.2 : 5.2;
+    for (let r = 1.2; r <= len; r += 0.4) put(Math.round(15.5 + Math.cos(a) * r), Math.round(16 + Math.sin(a) * r), k % 2 ? 2 : 3);
   }
-  box(15, 16, 16, 17, 3, false);
-  for (let x = 10; x <= 21; x += 2) box(x, 25, x, 27, 0, false);     // the speaker grille
+  box(15, 15, 16, 17, 3, 3);
+  for (let x = 10; x <= 21; x += 2) box(x, 24, x, 26, 3, 3);         // the speaker grille, lit
   let s = "";
   for (let y = 0; y < N; y++) { let x = 0; while (x < N) { const t = tone[y * N + x]; let e = x + 1; while (e < N && tone[y * N + e] === t) e++; if (t > 0) s += `<rect x="${x}" y="${y}" width="${e - x}" height="1"${t < 3 ? ` opacity="${OPAC[t]}"` : ""}/>`; x = e; } }
   return (sysRects = s);
