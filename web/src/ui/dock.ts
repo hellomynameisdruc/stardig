@@ -88,6 +88,25 @@ export function loadInDock(ref: TrackRef) {
   seekEl.value = "0"; paintRange(seekEl); $("tCur").textContent = "0:00"; $("tDur").textContent = "0:00";
 }
 
+/** A silent loop in this page while the track plays. The sound comes from YouTube's frame, and the
+ *  browser hands the media keys and the Touch Bar to whichever page plays; with this one playing too,
+ *  they come here (to the handlers below) and not to YouTube's frame. It plays silence, nothing else. */
+let anchor: HTMLAudioElement | null = null;
+function silence() {
+  if (anchor) return anchor;
+  const n = 8000, b = new Uint8Array(44 + n), v = new DataView(b.buffer), w = (o: number, t: string) => { for (let k = 0; k < 4; k++) b[o + k] = t.charCodeAt(k); };
+  w(0, "RIFF"); v.setUint32(4, 36 + n, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, "data"); v.setUint32(40, n, true); b.fill(128, 44);
+  anchor = new Audio(URL.createObjectURL(new Blob([b], { type: "audio/wav" }))); anchor.loop = true;
+  return anchor;
+}
+function holdMediaKeys(playing: boolean) {
+  const ms = "mediaSession" in navigator ? navigator.mediaSession : null; if (!ms) return;
+  try { ms.playbackState = playing ? "playing" : "paused"; } catch { /* */ }
+  const a = silence();
+  if (playing) a.play().catch(() => { /* not allowed before the first click: the keys stay with YouTube */ }); else a.pause();
+}
+
 /** the keyboard's media keys (⏮ ⏯ ⏭, F7–F9 on a Mac) and the system's now-playing panel drive the player */
 let mediaOn = false;
 function mediaKeys(title: string, artist: string, yt: string) {
@@ -130,7 +149,7 @@ export function initDock() {
       say(code === 101 || code === 150 ? "The owner doesn't allow this video elsewhere. Signal marked dark, jumping on" : gone ? "Signal lost: the video was removed. Marked dark, jumping on" : "Video unavailable. Jumping to a nearby signal", "err");
       setTimeout(next, gone ? 900 : 1500);
     },
-    onPlayingChange: (p) => { $("live").classList.toggle("on", p); state.onAir = p; $("pToggle").innerHTML = p ? ICON.pause : ICON.play; $("pToggle").setAttribute("aria-label", p ? "Pause" : "Play"); ticker(); },
+    onPlayingChange: (p) => { holdMediaKeys(p); $("live").classList.toggle("on", p); state.onAir = p; $("pToggle").innerHTML = p ? ICON.pause : ICON.play; $("pToggle").setAttribute("aria-label", p ? "Pause" : "Play"); ticker(); },
   });
 
   $("pNext").onclick = next;
