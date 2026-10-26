@@ -2,6 +2,8 @@
 // locked track is tried, and the dossier's play keys swapped for GET ACCESS outside the open galaxy.
 import { beta, openName, starOpen } from "../app/beta";
 import { galaxy, state } from "../app/state";
+import { select } from "../app/actions";
+import { cloudWanted } from "../cloud/client";
 import { provide, ui } from "../app/ports";
 import { onPilot, pilot, waitingPilots, watchPilots } from "../cloud/pilots";
 import { showWaiting } from "./comms";
@@ -48,7 +50,16 @@ function paintWaiting() {
   setMode("waiting", `<b>${waiting.size}</b> ${waiting.size === 1 ? "PILOT WAITS" : "PILOTS WAIT"} FOR ACCESS`, [{ label: "LIST", run: () => { showWaiting(); } }]);
 }
 
+/** without access, the visit starts at the open star, so it's plain what can be played */
+function landAtOpenStar() {
+  if (beta.open || !beta.on || location.hash.length > 1 || state.sel) return;
+  const s = galaxy.starIndex(beta.star); if (s >= 0) select({ kind: "star", s });
+}
+
 export function initBeta() {
+  // a signed-in pilot's access is known once the registry answers; a guest has none
+  if (cloudWanted()) { let first = true; onPilot(() => { if (first) { first = false; setTimeout(landAtOpenStar, 600); } }); }
+  else setTimeout(landAtOpenStar, 900);
   provide({
     locked: () => { say(`Closed beta: only ${openName()} is open. Sign in and ask for access, or enter an invite`, "err"); openPilot(); },
   });
