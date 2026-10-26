@@ -28,7 +28,15 @@
 .video iframe, .video > div { width: 100%; height: 100%; display: block; border: 0 }
 
 /* —— what is on air: the mode tag (SOLARIS, ODYSSEY…), the title, the artist */
-.dock-np { display: flex; flex-direction: column; gap: 2px; padding-top: 7px; min-width: 0 }
+.dock-np { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "ody ody" "t t" "a acts"; align-items: center; column-gap: 8px; row-gap: 2px; padding-top: 7px; min-width: 0 }
+.np-txt { display: contents }
+.dock-ody { grid-area: ody; justify-self: start }
+.np-t { grid-area: t; min-width: 0 }
+.np-a { grid-area: a; min-width: 0 }
+/* what you can do with the track on air: beacon, lists, share — beside its name, apart from the transport */
+.np-acts { grid-area: acts; display: flex; gap: 4px }
+.np-acts .key.act { width: 26px; height: 24px; min-width: 0; padding: 0; justify-content: center; font-size: var(--fs-xs); color: var(--dim); border-color: var(--faint) }
+.np-acts .key.act:hover, .np-acts .key.act[aria-expanded="true"] { color: var(--ink); border-color: var(--ink) }
 .dock-ody { align-self: flex-start; margin-bottom: 4px; max-width: 100%; overflow: hidden; text-overflow: clip; white-space: nowrap;
   font-family: var(--f-dot); font-size: var(--fs-xs); letter-spacing: .06em; color: var(--acc); padding: 0 5px; border: 1px solid var(--acc);
   box-shadow: 0 0 6px color-mix(in srgb, var(--acc) 45%, transparent); animation: flicker 4s infinite }
@@ -41,14 +49,14 @@
 .tc { font-size: var(--fs-xs); color: var(--dim); font-variant-numeric: tabular-nums; min-width: 26px }
 .tc:last-child { text-align: right }
 .pbar { display: grid; gap: 7px; padding-top: 7px }
-.pbar .tx { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px }
+.pbar .tx { display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 5px }
 .pbar { position: relative }
-/* the share menu opens over the transport keys */
-.share-pop { position: absolute; left: 0; right: 0; bottom: calc(100% - 26px); z-index: 2; display: grid; gap: 5px; padding: 6px; background: var(--bg); border: 1px solid var(--acc); box-shadow: 0 0 12px color-mix(in srgb, var(--acc) 35%, transparent) }
+/* the share menu drops down from its key, over the transport (never up over the video) */
+.share-pop { position: absolute; right: 0; top: 100%; width: 190px; z-index: 2; display: grid; gap: 5px; padding: 6px; background: var(--bg); border: 1px solid var(--acc); box-shadow: 0 0 12px color-mix(in srgb, var(--acc) 35%, transparent) }
 .share-pop .key { width: 100%; justify-content: flex-start }
 .pbar .key.sq { min-width: 0; width: 100%; height: 24px; padding: 0; font-size: var(--fs-xs); color: var(--ink) }
 .pbar .key.sq.hot { color: var(--inv-ink) }
-.pbar .key.sq.like-k.on, .like-k.on { color: var(--acc); border-color: var(--acc) }
+.pbar .key.sq.like-k.on, .like-k.on, .np-acts .key.act.like-k.on { color: var(--acc); border-color: var(--acc) }
 .pbar .mix { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center }
 .pbar .vk { font-family: var(--f-dot); font-size: var(--fs-xs); letter-spacing: .08em; color: var(--dim) }
 #vol { width: 100%; margin: 0 }
@@ -74,15 +82,19 @@
   .dock { position: fixed; left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important; width: auto; z-index: var(--z-sheet);
     padding: 0 10px calc(8px + env(safe-area-inset-bottom, 0px)); border-width: 1px 0 0;
     display: grid; grid-template-columns: 200px minmax(0, 1fr); column-gap: 10px; align-content: start;
-    grid-template-areas: "head head" "video np" "video seek" "video pbar"; grid-template-rows: auto auto auto 1fr }
+    grid-template-areas: "head head" "video ody" "video t" "video a" "video seek" "video pbar"; grid-template-rows: auto auto auto auto auto 1fr }
   .dock[hidden] { display: none }
   .dock::before, .dock::after { display: none }
   .dock-head { grid-area: head; cursor: default; padding: 4px 0 }
   .video { grid-area: video }
-  .dock-np { grid-area: np; padding-top: 0 }
   .seek { grid-area: seek }
   .pbar { grid-area: pbar; align-content: start }
   .pbar .key.sq { height: 30px; font-size: var(--fs-s) }
+  .np-acts .key.act { width: 30px; height: 26px }
+  /* the track's keys go up into the sheet's head row, beside ON AIR; the name gets the full width */
+  .dock-np, .np-txt { display: contents }
+  .np-acts { grid-area: head; justify-self: end; align-self: center; margin-right: 82px; gap: 4px; z-index: 1 }
+  .share-pop { top: 40px; right: 10px; width: 150px }  /* in the right column: never over the video */
   .dock { right: 6px; bottom: 6px }
   body.docked .term { padding-bottom: calc(246px + env(safe-area-inset-bottom, 0px)) }
   body.docked .side { display: none }

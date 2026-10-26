@@ -59,7 +59,15 @@
               <button type="button" class="key icon sm" id="dockMin" aria-label="Minimise and pause">_</button>
             </div>
             <div class="video" id="videoWrap"><div id="yt"></div></div>
-            <div class="dock-np"><span class="dock-ody" id="dockOdy" hidden>ODYSSEY <b id="dockOdyN"></b></span><span class="np-t" id="npTitle">—</span><span class="np-a" id="npArtist"></span></div>
+            <div class="dock-np">
+              <div class="np-txt"><span class="dock-ody" id="dockOdy" hidden>ODYSSEY <b id="dockOdyN"></b></span><span class="np-t" id="npTitle">—</span><span class="np-a" id="npArtist"></span></div>
+              <div class="np-acts">
+                  <button type="button" class="key act like-k" id="pLike" aria-label="Set beacon" aria-pressed="false" title="Set a beacon: save this track to your BEACONS (L)">♥</button>
+                  <button type="button" class="key act" id="pList" aria-label="Add to a list" aria-haspopup="true" aria-expanded="false" title="Put this track in one of your lists (⇧L)">≡</button>
+                  <button type="button" class="key act" id="pShare" aria-label="Share the track on air" aria-haspopup="true" aria-expanded="false" title="Share: copy a link, or send it to COMMS"></button>
+              </div>
+              <div class="share-pop" id="sharePop" role="menu" hidden><button type="button" class="key sm" data-share="copy" role="menuitem">⧉ COPY LINK</button><button type="button" class="key sm" data-share="send" role="menuitem">⇪ SEND TO COMMS</button></div>
+            </div>
             <div class="seek">
               <span class="tc" id="tCur">0:00</span>
               <input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="Seek">
@@ -70,11 +78,7 @@
                 <button type="button" class="key sq" id="pPrev" aria-label="Previous">◂◂</button>
                 <button type="button" class="key sq hot" id="pToggle" aria-label="Pause">❚❚</button>
                 <button type="button" class="key sq" id="pNext" aria-label="Next nearby">▸▸</button>
-                <button type="button" class="key sq" id="pShare" aria-label="Share the track on air" aria-haspopup="true" aria-expanded="false" title="Share: copy a link, or send it to COMMS"></button>
-                <button type="button" class="key sq like-k" id="pLike" aria-label="Set beacon" aria-pressed="false" title="Set a beacon: save this track to your BEACONS (L)">♥</button>
-                <button type="button" class="key sq" id="pList" aria-label="Add to a list" aria-haspopup="true" aria-expanded="false" title="Put this track in one of your lists (⇧L)">≡</button>
               </div>
-              <div class="share-pop" id="sharePop" role="menu" hidden><button type="button" class="key sm" data-share="copy" role="menuitem">⧉ COPY LINK</button><button type="button" class="key sm" data-share="send" role="menuitem">⇪ SEND TO COMMS</button></div>
               <div class="mix">
                 <span class="vk" aria-hidden="true">VOL</span>
                 <input type="range" id="vol" min="0" max="100" value="80" aria-label="Volume">
