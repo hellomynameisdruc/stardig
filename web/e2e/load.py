@@ -24,7 +24,7 @@ DATA = pathlib.Path(__file__).resolve().parent.parent / "public" / "data"
 SB = "https://muuaqquhqgthkfzlqkvq.supabase.co"
 
 # limits
-MAX_START_FILES = 2        # star track files fetched by just opening the site (the map starts zoomed out)
+MAX_START_FILES = 16       # data files fetched by opening the site: the stars in view (a guest lands at the open star), not every style the log and the chat mention
 MAX_TASK_MS = 1200         # the longest freeze allowed after the first seconds
 MAX_HEAP_MB = 200
 
