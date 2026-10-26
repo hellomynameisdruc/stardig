@@ -33,10 +33,11 @@ describe("logbook merge", () => {
 });
 
 describe("list merge", () => {
-  const L = (id: string, at: number, ys: string[], name = id) => ({ id, name, ys, at });
-  it("keeps the copy changed last, honours deleted lists, drops tracks no longer beaconed", () => {
-    const out = mergeLists([L("a", 5, ["x", "z"], "local"), L("b", 1, [])], [L("a", 3, ["x"], "remote"), L("c", 2, ["y"]), L("d", 2, [])], { "L:d": 9, "L:b": 0 }, new Set(["x", "y"]));
+  const it_ = (y: string) => ({ y, s: 0, i: 0, t: y, a: "", at: 1 });
+  const L = (id: string, at: number, ys: string[], name = id) => ({ id, name, items: ys.map(it_), at });
+  it("keeps the copy changed last and honours deleted lists", () => {
+    const out = mergeLists([L("a", 5, ["x", "z"], "local"), L("b", 1, [])], [L("a", 3, ["x"], "remote"), L("c", 2, ["y"]), L("d", 2, [])], { "L:d": 9, "L:b": 0 });
     expect(out.map((l) => l.id)).toEqual(["a", "c", "b"]);
-    expect(out[0]).toMatchObject({ name: "local", ys: ["x"] });
+    expect(out[0].name).toBe("local"); expect(out[0].items.map((b) => b.y)).toEqual(["x", "z"]);
   });
 });

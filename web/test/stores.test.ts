@@ -98,20 +98,24 @@ describe("DeadSignals", () => {
 });
 
 describe("Beacon lists", () => {
-  it("makes lists, files beacons into them, and forgets removed beacons everywhere", () => {
+  it("makes lists apart from the beacons, keeps them across reloads, and reads the old id-only lists", () => {
     const kv = memoryKV(); const b = new Beacons(kv, () => chunk);
     const id = b.createList("  night   drive ")!;
     expect(b.getList(id)!.name).toBe("night drive");
-    b.toggleIn(id, "aaa"); expect(b.inList(id, "aaa")).toBe(false); // only beaconed tracks go in
-    b.toggle({ s: 0, i: 0 }); b.toggleIn(id, "aaa");
-    expect(b.of(id).map((x) => x.y)).toEqual(["aaa"]);
-    b.setCurrent(id); b.toggle({ s: 0, i: 1 }); // the open list gets new beacons
+    b.toggleIn(id, b.item({ s: 0, i: 0 })!); // in the list, not a beacon
+    expect(b.size).toBe(0); expect(b.of(id).map((x) => x.y)).toEqual(["aaa"]);
+    b.toggleIn(id, b.item({ s: 0, i: 1 })!);
     expect(b.of(id).map((x) => x.y)).toEqual(["bbb", "aaa"]);
     expect(b.playlistLinks(id)[0]).toContain("bbb,aaa");
-    const again = new Beacons(kv, () => chunk); // survives reload
-    expect(again.current).toBe(id); expect(again.lists[0].ys).toEqual(["bbb", "aaa"]);
-    b.remove("aaa"); expect(b.getList(id)!.ys).toEqual(["bbb"]);
+    b.setCurrent(id); b.toggle({ s: 0, i: 2 }); // a beacon doesn't go into the open list
+    expect(b.inList(id, "ccc")).toBe(false);
+    b.remove("ccc"); b.toggleIn(id, b.item({ s: 0, i: 0 })!); // out again
+    const again = new Beacons(kv, () => chunk);
+    expect(again.current).toBe(id); expect(again.of(id).map((x) => x.y)).toEqual(["bbb"]);
     let gone = ""; b.listGone.on((x) => { gone = x; });
     b.deleteList(id); expect(b.lists.length).toBe(0); expect(b.current).toBe(""); expect(gone).toBe(id);
+    const likes = [{ y: "aaa", s: 0, i: 0, t: "A", a: "DJ", at: 1 }];
+    const old = new Beacons(memoryKV({ "kosmos-likes": JSON.stringify(likes), "kosmos-lists": JSON.stringify([{ id: "x", name: "old", ys: ["aaa", "zzz"], at: 1 }]) }), () => chunk);
+    expect(old.of("x").map((x) => x.t)).toEqual(["A"]);
   });
 });

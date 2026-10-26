@@ -67,7 +67,7 @@ export async function saveToYouTube(id: string, progress: (done: number, total: 
     return { ok: false, why };
   }
   const url = `https://www.youtube.com/playlist?list=${yt}`;
-  const todo = l.ys.filter((y) => !sent.has(y)); // in the list's order, newest first
+  const todo = l.items.map((b) => b.y).filter((y) => !sent.has(y)); // in the list's order, newest first
   let added = 0;
   for (const y of todo) {
     progress(added, todo.length);

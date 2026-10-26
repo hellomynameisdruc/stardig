@@ -4,7 +4,7 @@
 // unless it was set again later. Ore (belt tracks dug up) is a plain union. Flights are counted for good, apart from the short log: each device
 // keeps its own tally and the account holds them all, so the total adds up across devices.
 import { beacons, flightLog, ore } from "../app/state";
-import type { Beacon, BList } from "../store/beacons";
+import { type Beacon, type BList, readList } from "../store/beacons";
 import type { LogEntry } from "../store/flightLog";
 import { browserKV, readJSON } from "../store/storage";
 import { cloud } from "./client";
@@ -51,16 +51,15 @@ export function mergeLogbook(localB: readonly Beacon[], localL: readonly LogEntr
 }
 
 /** playlists: by id, the copy changed last wins; a deleted list leaves a tombstone ("L:" + id) that
- *  beats copies older than it. Only tracks still beaconed stay in a list. */
-export function mergeLists(local: readonly BList[], remote: unknown, g: Record<string, number>, have: Set<string>): BList[] {
+ *  beats copies older than it. */
+export function mergeLists(local: readonly BList[], remote: unknown, g: Record<string, number>, beacons: readonly Beacon[] = []): BList[] {
   const by = new Map<string, BList>(), order: string[] = [];
-  for (const l of [...(Array.isArray(remote) ? remote : []) as BList[], ...local]) {
-    if (!l || typeof l.id !== "string" || typeof l.name !== "string" || !Array.isArray(l.ys)) continue;
+  for (const raw of [...(Array.isArray(remote) ? remote : []) as unknown[], ...local]) {
+    const l = readList(raw, beacons); if (!l) continue;
     const had = by.get(l.id); if (!had) order.push(l.id);
     if (!had || (l.at ?? 0) > (had.at ?? 0)) by.set(l.id, l);
   }
-  return order.map((id) => by.get(id)!).filter((l) => !(g["L:" + l.id] >= (l.at ?? 0)))
-    .map((l) => ({ ...l, ys: l.ys.filter((y) => typeof y === "string" && have.has(y)) }));
+  return order.map((id) => by.get(id)!).filter((l) => !(g["L:" + l.id] >= (l.at ?? 0)));
 }
 
 function merge(remote: { beacons?: unknown; gone?: unknown; flights?: unknown }) {
@@ -68,7 +67,7 @@ function merge(remote: { beacons?: unknown; gone?: unknown; flights?: unknown })
   gone = m.gone; trimGone(); counts = m.count; saveCounts();
   applying = true;
   const rf = remote.flights as { ore?: unknown; lists?: unknown } | null;
-  const pl = mergeLists(beacons.lists, rf && !Array.isArray(rf) ? rf.lists : [], gone, new Set(m.beacons.map((b) => b.y)));
+  const pl = mergeLists(beacons.lists, rf && !Array.isArray(rf) ? rf.lists : [], gone, m.beacons);
   try { beacons.replaceAll(m.beacons); beacons.replaceLists(pl); flightLog.replaceAll(m.flights); if (rf && !Array.isArray(rf)) ore.merge(rf.ore); }
   finally { applying = false; }
   known = new Set(beacons.all.map((b) => b.y));
