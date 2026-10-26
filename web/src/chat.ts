@@ -84,7 +84,7 @@ function body(text: string) {
   return `${said ? `<span class="m-t">${esc(said)}</span>` : ""}${sig ? trackCard(text) : f ? fleetCard(f[1]) : ""}`;
 }
 function line(m: Msg) {
-  if (!m.pilot) return `<div class="msg sys">${systemAvatarSvg(32)}<div class="m-b"><span class="m-h"><span class="rk" style="--rk:var(--ink)" title="The station">◆ SYS</span><b class="sys-n">SYSTEM</b><time>${time(m.created_at)}</time></span><span class="m-t">${esc(m.body)}</span></div></div>`;
+  if (!m.pilot) return `<div class="msg sys">${systemAvatarSvg(32)}<div class="m-b"><span class="m-h"><span class="rk" style="--rk:var(--red)" title="The station">◆ SYS</span><b class="sys-n">SYSTEM</b><time>${time(m.created_at)}</time></span><span class="m-t">${esc(m.body)}</span></div></div>`;
   const p = roster.get(m.pilot), mine = m.pilot === pilot.me?.id;
   const act = !pilot.me ? "" : mine || isStaff(pilot.me) ? `<button class="m-x" data-del="${m.id}" aria-label="Delete the message">×</button>` : `<button class="m-x" data-rep="${m.id}" aria-label="Report this message" ${reported.has(m.id) ? "disabled" : ""}>!</button>`;
   return `<div class="msg${mine ? " mine" : ""}">${avatarSvg(p?.avatar ?? 0, 32)}<div class="m-b"><span class="m-h">${nameTag(p)}<time>${time(m.created_at)}</time>${act}</span>${body(m.body)}</div></div>`;

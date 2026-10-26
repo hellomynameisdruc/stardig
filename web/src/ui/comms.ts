@@ -90,7 +90,7 @@ const looked = new Set<string>();
 /** a word from the station itself: a new pilot in the ranks */
 function sysLine(m: Msg) {
   const act = pilot.me && isStaff(pilot.me) ? `<button class="m-x" data-del="${m.id}" aria-label="Delete the message" title="Delete">×</button>` : "";
-  return `<div class="msg sys" data-mid="${m.id}">${systemAvatarSvg(32)}<div class="m-b"><span class="m-h"><span class="rk" style="--rk:var(--ink)" title="The station">◆ SYS</span><b class="sys-n">SYSTEM</b><time>${time(m.created_at)}</time>${act}</span>${parseSignal(m.body) ? `<span class="m-t">◆ A SIGNAL FROM THE STATION</span>` : ""}${body(m.body)}${reactionRow(m)}</div></div>`;
+  return `<div class="msg sys" data-mid="${m.id}">${systemAvatarSvg(32)}<div class="m-b"><span class="m-h"><span class="rk" style="--rk:var(--red)" title="The station">◆ SYS</span><b class="sys-n">SYSTEM</b><time>${time(m.created_at)}</time>${act}</span>${parseSignal(m.body) ? `<span class="m-t">◆ A SIGNAL FROM THE STATION</span>` : ""}${body(m.body)}${reactionRow(m)}</div></div>`;
 }
 function line(m: Msg) {
   if (!m.pilot) return sysLine(m);
