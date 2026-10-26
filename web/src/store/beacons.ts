@@ -6,7 +6,7 @@ import { type KV, readJSON, Signal } from "./storage";
 /** st: the star's name, to find the track again after the map is rebuilt */
 export type Beacon = { y: string; s: number; i: number; t: string; a: string; at: number; st?: string };
 /** a named playlist of beacons: the ids of its tracks, newest first. at: when it last changed */
-export type BList = { id: string; name: string; ys: string[]; at: number };
+export type BList = { id: string; name: string; ys: string[]; at: number; yt?: string; sent?: string[] };
 const KEY = "kosmos-likes", LISTS = "kosmos-lists", CUR = "kosmos-list-cur";
 export const MAX_LISTS = 24;
 const okList = (l: unknown): l is BList => !!l && typeof (l as BList).id === "string" && typeof (l as BList).name === "string" && Array.isArray((l as BList).ys);
@@ -53,6 +53,11 @@ export class Beacons {
     if (!this.getList(id)) return;
     this.pl = this.pl.filter((l) => l.id !== id); if (this.cur === id) { this.cur = ""; this.kv.set(CUR, ""); }
     this.listGone.emit(id); this.saveLists();
+  }
+  /** the list's playlist on YouTube, and which of its tracks are in it already */
+  setYouTube(id: string, yt: string | undefined, sent: string[]) {
+    const l = this.getList(id); if (!l) return;
+    l.yt = yt; l.sent = sent; l.at = Date.now(); this.saveLists();
   }
   /** put a beaconed track in a list, or take it out */
   toggleIn(id: string, y: string) {

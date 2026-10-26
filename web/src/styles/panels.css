@@ -159,3 +159,5 @@
 .lp-i b { font-weight: normal }
 .lp-i:hover, .lp-i.on { color: var(--ink) }
 .lp-n { margin: 0 }
+button.ytlist { width: 100%; background: none; text-align: left; cursor: var(--cur-hand, pointer) }
+button.ytlist:disabled { cursor: default; opacity: .8; animation: flicker 2s infinite }

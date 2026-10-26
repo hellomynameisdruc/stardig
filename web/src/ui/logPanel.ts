@@ -4,6 +4,7 @@ import { $ } from "../core/dom";
 import { beacons, chunk, flightLog, galaxy, tracks } from "../app/state";
 import { type Beacon, MAX_LISTS } from "../store/beacons";
 import { openListPicker } from "./listPicker";
+import { saveToYouTube, youtubeReady } from "../cloud/youtube";
 import { select } from "../app/actions";
 import { locateYt } from "../app/vault";
 import { openComms } from "./comms";
@@ -45,6 +46,18 @@ export function renderLog() {
 
 // BEACONS: every track you set a beacon on, and your lists of them. The chips switch between ALL and
 // a list; while a list is open, new beacons go into it too.
+let saving = "", saveNote = "", saveMsg = "";
+async function saveList(id: string) {
+  saving = id; saveNote = "CONNECTING TO YOUTUBE…"; saveMsg = ""; renderBeacons();
+  const r = await saveToYouTube(id, (d, n) => { saveNote = `SAVING TO YOUTUBE · ${d}/${n}…`; renderBeacons(); });
+  saving = "";
+  saveMsg = r.ok ? (r.added ? `Saved: ${r.added} ${r.added === 1 ? "track" : "tracks"} added to your YouTube playlist.` : "Your YouTube playlist is up to date.")
+    : r.why === "denied" ? "YouTube wasn't connected (the Google window was closed or said no)."
+    : r.why === "quota" ? `YouTube's limit for today is used up${r.added ? ` after ${r.added} tracks` : ""}. The rest can be added tomorrow.`
+    : r.why === "nochannel" ? "Your Google account has no YouTube channel yet: make one on YouTube, then try again."
+    : "Something went wrong with YouTube. Try again.";
+  renderBeacons();
+}
 let shown: Beacon[] = [], edit: "" | "new" | "rename" | "delete" = "";
 export function renderBeacons() {
   drawBeacons();
@@ -66,9 +79,21 @@ function drawBeacons() {
   shown = beacons.of(cur);
   if (!beacons.size) { el.innerHTML = chips + `<p class="note">NO BEACONS YET. SET ONE ON A TRACK YOU LOVE: THE BEACON KEY OR <kbd>L</kbd>. <kbd>⇧L</kbd> PUTS IT IN A LIST.</p>`; return; }
   if (!shown.length) { el.innerHTML = chips + `<p class="note">THIS LIST IS EMPTY. ADD TRACKS WITH ＋ NEXT TO A BEACON (IN ALL), THE LIST KEY IN THE PLAYER, OR <kbd>⇧L</kbd>. WHILE IT'S OPEN, NEW BEACONS LAND HERE.</p>`; return; }
-  const parts = beacons.playlistLinks(cur);
-  const links = parts.map((href, k) => `<a class="ytlist" href="${href}" target="_blank" rel="noopener">▶ OPEN ${list ? `“${esc(list.name.toUpperCase())}”` : "ALL"} AS YOUTUBE PLAYLIST${parts.length > 1 ? ` · PART ${k + 1}/${parts.length}` : ""} ↗</a>`).join("");
-  el.innerHTML = chips + links + `<p class="note ythint">Opens on YouTube; use “Save” there to keep it in your library.</p>` +
+  let links: string;
+  if (list && youtubeReady()) {
+    // a real playlist in the pilot's own YouTube
+    const fresh = list.ys.filter((y) => !(list.sent ?? []).includes(y)).length, busy = saving === list.id;
+    links = (list.yt ? `<a class="ytlist" href="https://www.youtube.com/playlist?list=${esc(list.yt)}" target="_blank" rel="noopener">▶ OPEN “${esc(list.name.toUpperCase())}” ON YOUTUBE ↗</a>` : "") +
+      (busy ? `<button type="button" class="ytlist" disabled>${esc(saveNote)}</button>`
+        : !list.yt ? `<button type="button" class="ytlist" data-ytsave>⇪ SAVE TO MY YOUTUBE AS A PLAYLIST</button>`
+        : fresh ? `<button type="button" class="ytlist" data-ytsave>⇪ ADD ${fresh} NEW ${fresh === 1 ? "TRACK" : "TRACKS"} TO THE YOUTUBE PLAYLIST</button>` : "") +
+      `<p class="note ythint">${saveMsg ? esc(saveMsg) : list.yt ? "A private playlist in your YouTube. Tracks taken out here stay there." : "Makes a private playlist in your own YouTube account (Google asks once)."}</p>`;
+  } else {
+    const parts = beacons.playlistLinks(cur);
+    links = parts.map((href, k) => `<a class="ytlist" href="${href}" target="_blank" rel="noopener">▶ PLAY ${list ? `“${esc(list.name.toUpperCase())}”` : "ALL"} ON YOUTUBE${parts.length > 1 ? ` · PART ${k + 1}/${parts.length}` : ""} ↗</a>`).join("") +
+      `<p class="note ythint">${list ? "Opens on YouTube as a quick, temporary list." : "A quick, temporary list on YouTube. To keep one, make a list and save it to your YouTube."}</p>`;
+  }
+  el.innerHTML = chips + links +
     shown.map((b, k) => {
       const style = b.st ?? galaxy.stars[b.s]?.name ?? "", n = beacons.lists.filter((l) => l.ys.includes(b.y)).length;
       return `<div class="lk"><button data-bk="${k}"><time>${pad(k + 1, 2)}</time><span title="${esc(`${b.a ?? ""} — ${b.t ?? ""}`)}">▸ ${esc(b.a ?? "")} — ${esc(b.t ?? "")}${style ? ` · ${esc(style.toUpperCase())}` : ""}</span></button>` +
@@ -119,11 +144,12 @@ export function initLogPanel() {
   $("log").addEventListener("click", (e) => { const b = (e.target as HTMLElement).closest<HTMLElement>("[data-log]"); const r = b && logRefs[+b.dataset.log!]; if (r) go(r, b!); });
   $("liked").addEventListener("click", (e) => {
     const t = e.target as HTMLElement, cur = beacons.current;
-    const c = t.closest<HTMLElement>("[data-bl]"); if (c) { edit = ""; beacons.setCurrent(c.dataset.bl!); return; }
+    const c = t.closest<HTMLElement>("[data-bl]"); if (c) { edit = ""; saveMsg = ""; beacons.setCurrent(c.dataset.bl!); return; }
     if (t.closest("[data-blnew]")) { edit = "new"; renderBeacons(); return; }
     if (t.closest("[data-blren]")) { edit = "rename"; renderBeacons(); return; }
     if (t.closest("[data-blcancel]")) { edit = ""; renderBeacons(); return; }
     if (t.closest("[data-bldel]")) { if (edit === "delete") { edit = ""; beacons.deleteList(cur); } else { edit = "delete"; renderBeacons(); } return; }
+    if (t.closest("[data-ytsave]")) { if (cur && !saving) saveList(cur); return; }
     const lp = t.closest<HTMLElement>("[data-lp]"); if (lp) { openListPicker(lp, lp.dataset.lp!, () => undefined); return; }
     const u = t.closest<HTMLElement>("[data-y]");
     if (u) { if (cur) beacons.toggleIn(cur, u.dataset.y!); else beacons.remove(u.dataset.y!); return; }
