@@ -49,7 +49,7 @@
 .tc { font-size: var(--fs-xs); color: var(--dim); font-variant-numeric: tabular-nums; min-width: 26px }
 .tc:last-child { text-align: right }
 .pbar { display: grid; gap: 7px; padding-top: 7px }
-.pbar .tx { display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 5px }
+.pbar .tx { display: grid; grid-template-columns: repeat(3, 64px); justify-content: center; gap: 8px }
 .pbar { position: relative }
 /* the share menu drops down from its key, over the transport (never up over the video) */
 .share-pop { position: absolute; right: 0; top: 100%; width: 190px; z-index: 2; display: grid; gap: 5px; padding: 6px; background: var(--bg); border: 1px solid var(--acc); box-shadow: 0 0 12px color-mix(in srgb, var(--acc) 35%, transparent) }
