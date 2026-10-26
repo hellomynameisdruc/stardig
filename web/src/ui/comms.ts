@@ -5,15 +5,15 @@
 // The messages themselves live in cloud/comms.ts, the fleets in cloud/fleet.ts.
 import { esc, pad } from "../core/util";
 import { $ } from "../core/dom";
-import { ALL, clearInvites, dropRoom, goLive, grantRank, loadRoom, messageById, messages, onComms, REACTIONS, reactionsOf, remove, report, toggleReaction, transmit, type Msg } from "../cloud/comms";
-import { crewCount, grantAccess, lookup, makeInvite, onPilot, pilot, roster, waitingPilots, wake } from "../cloud/pilots";
+import { ALL, clearInvites, dropRoom, goLive, grantRank, loadRoom, messageById, messages, onComms, REACTIONS, reactionsOf, remove, report, systemSay, toggleReaction, transmit, type Msg } from "../cloud/comms";
+import { approveAll, crewCount, grantAccess, lookup, makeInvite, onPilot, pilot, roster, waitingPilots, wake } from "../cloud/pilots";
 import { setCrew } from "./ticker";
 import { beta } from "../app/beta";
 import { ui } from "../app/ports";
 import { fleet, fleetRoom, inviteLink, known, leave, onFleet, tuneIn, watchOnAir } from "../cloud/fleet";
-import { chunk, galaxy } from "../app/state";
+import { chunk, galaxy, tracks } from "../app/state";
 import { select } from "../app/actions";
-import { find, parseSignal, placed, withoutSignal } from "../app/signal";
+import { find, parseSignal, placed, signalLink, withoutSignal } from "../app/signal";
 import { avatarSvg, systemAvatarSvg } from "./avatar";
 import { openPilot } from "./pilot";
 import { EARNED, GIVEN, isStaff, rankKey, rankOf, rankTag, RANKS } from "./ranks";
@@ -90,7 +90,7 @@ const looked = new Set<string>();
 /** a word from the station itself: a new pilot in the ranks */
 function sysLine(m: Msg) {
   const act = pilot.me && isStaff(pilot.me) ? `<button class="m-x" data-del="${m.id}" aria-label="Delete the message" title="Delete">×</button>` : "";
-  return `<div class="msg sys" data-mid="${m.id}">${systemAvatarSvg(32)}<div class="m-b"><span class="m-h"><span class="rk" style="--rk:var(--ink)" title="The station">◆ SYS</span><b class="sys-n">SYSTEM</b><time>${time(m.created_at)}</time>${act}</span><span class="m-t">${esc(m.body)}</span>${reactionRow(m)}</div></div>`;
+  return `<div class="msg sys" data-mid="${m.id}">${systemAvatarSvg(32)}<div class="m-b"><span class="m-h"><span class="rk" style="--rk:var(--ink)" title="The station">◆ SYS</span><b class="sys-n">SYSTEM</b><time>${time(m.created_at)}</time>${act}</span>${parseSignal(m.body) ? `<span class="m-t">◆ A SIGNAL FROM THE STATION</span>` : ""}${body(m.body)}${reactionRow(m)}</div></div>`;
 }
 function line(m: Msg) {
   if (!m.pilot) return sysLine(m);
@@ -207,9 +207,14 @@ async function send() {
 /** the console: /ranks lists them; /rank CALLSIGN RANK (the founder) gives one */
 async function command(text: string) {
   const inp = $<HTMLInputElement>("commsIn"), [cmd, nick, ...rest] = text.slice(1).trim().split(/\s+/);
-  if (cmd === "ranks" || cmd === "help") { inp.value = ""; tell(`Earned by digging: ${EARNED.map((e) => RANKS[e.rank].label).join(" › ")}. Given by the founder: ${GIVEN.map((k) => RANKS[k].label).join(" · ")} (/rank CALLSIGN RANK). Closed beta: /waiting · /approve CALLSIGN · /revoke CALLSIGN · /invite [PILOTS]`, "info"); return; }
+  if (cmd === "ranks" || cmd === "help") { inp.value = ""; tell(`Earned by digging: ${EARNED.map((e) => RANKS[e.rank].label).join(" › ")}. Given by the founder: ${GIVEN.map((k) => RANKS[k].label).join(" · ")} (/rank CALLSIGN RANK). Closed beta: /waiting · /approve CALLSIGN · /approve all · /revoke CALLSIGN · /invite [PILOTS]. SYSTEM: /sys TEXT · /tip [STYLE] · /pilots · /welcome CALLSIGN`, "info"); return; }
   // the closed beta (the founder): let a pilot in or out, make an invite code
   if (cmd === "waiting") { inp.value = ""; await showWaiting(); return; }
+  if (cmd === "approve" && nick?.toLowerCase() === "all") {
+    const res = await approveAll();
+    if ("error" in res) { tell(res.error === "not-authorised" ? "Only the founder lets pilots in" : res.error === "missing" ? "/approve all needs stardig-system.sql run in Supabase" : `Failed: ${res.error}`); return; }
+    inp.value = ""; note = null; paint(); say(res.n ? `${res.n} ${res.n === 1 ? "pilot is" : "pilots are"} in: full access` : "Nobody is waiting"); return;
+  }
   if (cmd === "approve" || cmd === "revoke") {
     if (!nick) { tell(`Who? /${cmd} CALLSIGN`); return; }
     const res = await grantAccess(nick, cmd === "approve");
@@ -221,6 +226,27 @@ async function command(text: string) {
     if ("error" in res) { tell(res.error === "not-authorised" ? "Only the founder makes invites" : `Failed: ${res.error}`); return; }
     inp.value = ""; await navigator.clipboard.writeText(res.code).catch(() => {});
     tell(`Invite code ${res.code} · good for ${n} ${n === 1 ? "pilot" : "pilots"} · copied`, "info"); return;
+  }
+  // SYSTEM, the station's voice (the founder's): an announcement, a track, the crew, a welcome
+  if (cmd === "sys" || cmd === "tip" || cmd === "pilots" || cmd === "welcome") {
+    const arg = text.slice(1).trim().slice(cmd.length).trim();
+    let out = "";
+    if (cmd === "sys") { if (!arg) { tell("What should SYSTEM say? /sys TEXT"); return; } out = arg; }
+    else if (cmd === "welcome") { if (!arg) { tell("Who? /welcome CALLSIGN"); return; } out = `◆ NEW PILOT IN THE RANKS: ${arg.toUpperCase()}. WELCOME ABOARD, CLEAR SKIES AND GOOD DIGGING.`; }
+    else if (cmd === "pilots") { const n = await crewCount().catch(() => null); if (n === null) { tell("The registry didn't answer. Try again"); return; } out = `◆ ${n} ${n === 1 ? "PILOT" : "PILOTS"} IN THE RANKS. THE MAP HAS ${galaxy.stars.length} STARS TO DIG.`; }
+    else {
+      // a random track: from the style named, or from anywhere (bigger styles more often)
+      let s = arg ? galaxy.stars.findIndex((x) => x.name.toLowerCase() === arg.toLowerCase()) : -1;
+      if (arg && s < 0) { tell(`No style called ${arg}`); return; }
+      if (s < 0) { const tot = galaxy.stars.reduce((a, x) => a + x.tracks, 0); let r = Math.random() * tot; s = galaxy.stars.findIndex((x) => (r -= x.tracks) < 0); if (s < 0) s = 0; }
+      const ch = await tracks.load(s).catch(() => null); const n = ch ? ch.n0 ?? ch.yt.length : 0;
+      if (!ch || !n) { tell("Couldn't reach that style's tracks. Try again"); return; }
+      const i = Math.floor(Math.random() * n), who = ch.an[ch.a[i]];
+      out = `${`♪ ${ch.t[i]}${who ? ` — ${who}` : ""}`.slice(0, 200)}\n${signalLink(s, i)}`;
+    }
+    const e = await systemSay(out);
+    if (e) { tell(e === "not-authorised" ? "Only the founder speaks as SYSTEM" : e === "missing" ? "SYSTEM can't speak yet: run stardig-system.sql in Supabase" : `Failed: ${e}`); return; }
+    inp.value = ""; note = null; paint(); return;
   }
   if (cmd !== "rank" || !nick || !rest.length) { tell("Unknown command. Try /ranks"); return; }
   const r = rankKey(rest.join(" ")); if (!r) { tell(`No such rank. ${Object.keys(RANKS).join(" · ")}`); return; }

@@ -103,6 +103,13 @@ export async function grantAccess(nick: string, allow: boolean): Promise<{ nick:
   for (const p of roster.values()) if (p.nick.toLowerCase() === nick.toLowerCase()) p.access = allow;
   return { nick: String(data) };
 }
+/** the founder lets in everyone waiting; how many */
+export async function approveAll(): Promise<{ n: number } | { error: string }> {
+  const { data, error } = await (await cloud()).rpc("approve_all");
+  if (error) return { error: /NOT AUTHORISED/.test(error.message) ? "not-authorised" : /approve_all/.test(error.message) ? "missing" : error.message };
+  for (const p of roster.values()) p.access = true;
+  return { n: Number(data) || 0 };
+}
 /** the founder makes an invite code good for `uses` pilots */
 export async function makeInvite(uses: number): Promise<{ code: string } | { error: string }> {
   const { data, error } = await (await cloud()).rpc("make_invite", { uses });

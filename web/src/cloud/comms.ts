@@ -118,6 +118,11 @@ export async function transmit(room: string, text: string, replyTo: number | nul
   const m = data as unknown as Msg; if (add({ ...m, room })) emit({ kind: "new", room, msg: m });
   return null;
 }
+/** the founder speaks as SYSTEM, the station itself (the system_say function checks it's the founder) */
+export async function systemSay(text: string): Promise<string | null> {
+  const { error } = await (await cloud()).rpc("system_say", { body: text.slice(0, 400) });
+  return error ? (/NOT AUTHORISED/.test(error.message) ? "not-authorised" : /system_say/.test(error.message) ? "missing" : error.message) : null;
+}
 export async function remove(id: number) {
   const { error } = await (await cloud()).from("messages").delete().eq("id", id);
   if (error) return false;
