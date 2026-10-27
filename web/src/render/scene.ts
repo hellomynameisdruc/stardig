@@ -133,18 +133,21 @@ function drawFleet(ctx: CanvasRenderingContext2D, si: number, x: number, y: numb
   ctx.restore();
 }
 
-// Frame pacing: full speed while something moves on purpose (a flight, zoom, drag, a wormhole); the slow
-// drift of orbits and pulsing stars is drawn at ~15 fps, and ~8 fps after 20 s untouched, so a
-// laptop doesn't run hot just showing the map.
-let lastInput = performance.now(), lastDrawn = 0;
+// Frame pacing: full speed while something moves on purpose (a flight, zoom, drag, a wormhole). The
+// drift of orbits and the stars pulsing to the beat keep a smooth pace too — 60 fps while a frame is
+// cheap, 30 when it costs more or after 20 s untouched, 15 only when frames are really heavy — so the
+// map never stutters, and a slow laptop still doesn't run hot just showing it.
+let lastInput = performance.now(), lastDrawn = 0, cost = 4;
 for (const ev of ["pointerdown", "pointermove", "wheel", "keydown", "touchstart"]) addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true, capture: true });
 function frame(now: number) {
   const busy = cam.flying || state.warping || state.dirty || now - lastInput < 1500;
-  const gap = busy ? 0 : now - lastInput < 20000 ? 66 : 125;
+  const heavy = cost > 10, fresh = now - lastInput < 20000;
+  const gap = busy ? 0 : heavy ? 62 : fresh && cost < 4 ? 0 : 29;
   if (gap && now - lastDrawn < gap) { requestAnimationFrame(frame); return; }
   if (!gap && lastDrawn && now - lastDrawn < 200) watchFrame(now - lastDrawn); // only full-speed frames count
   lastDrawn = now;
   motion.now = now;
+  const t0 = performance.now();
   // a flight doesn't repaint the background every frame (the costliest thing we draw): drawLive slides
   // and stretches the last picture and repaints it only now and then, and once the flight lands
   cam.update(now);
@@ -154,6 +157,7 @@ function frame(now: number) {
     drawLive(now);
   }
   for (const f of perFrame) f(now);
+  cost = cost * 0.9 + (performance.now() - t0) * 0.1; // what a frame costs lately, in ms
   requestAnimationFrame(frame);
 }
 export const startLoop = () => requestAnimationFrame(frame);
