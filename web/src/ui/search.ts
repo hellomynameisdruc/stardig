@@ -1,4 +1,5 @@
-// The command line: search styles, labels and artists.
+// The command line: search galaxies, styles, labels, artists and track titles. Titles (on the map and in
+// the vault) are in small files by their first letters (search/), fetched only while someone types.
 import { esc } from "../core/util";
 import { $ } from "../core/dom";
 import { galaxy, tracks } from "../app/state";
@@ -20,6 +21,47 @@ function vaultShelf(c: string, then: () => void) {
   return null;
 }
 
+// —— track titles
+const normT = (s: string) => s.toLowerCase().normalize("NFKD").replace(/\p{M}/gu, "").replace(/[^0-9a-z]+/g, "");
+type Shelf = { t: string[]; n: string[]; a: number[]; s: number[]; i: number[]; norm: string[] };
+let split: Set<string> | null | undefined; // keys split into longer ones (undefined: not asked yet)
+const shelves = new Map<string, Shelf | null>();
+function titleShelf(key: string, then: () => void): Shelf | null {
+  if (shelves.has(key)) return shelves.get(key) ?? null;
+  shelves.set(key, null);
+  fetch(dataUrl(`search/${key}.json`)).then((r) => (r.ok ? r.json() : null)).then((w) => {
+    if (!w) return;
+    const t = (w.t as string).split("\n");
+    shelves.set(key, { t, n: (w.n as string).split("\n"), a: w.a, s: w.s, i: w.i, norm: t.map(normT) }); then();
+  }).catch(() => shelves.delete(key));
+  return null;
+}
+/** which file holds titles starting with the query; "" while more letters are needed; null: none to look in */
+function titleKey(s: string, then: () => void): string | null {
+  if (split === undefined) { split = null; fetch(dataUrl("search/index.json")).then((r) => (r.ok ? r.json() : { split: [] })).then((w) => { split = new Set(w.split); then(); }).catch(() => { split = undefined; }); }
+  if (!split) return null;
+  const n = normT(s);
+  if (n.length < 2) return /[\p{L}\p{N}]{2}/u.test(s) ? "_" : null; // other scripts: one file, matched as typed
+  let k = n.slice(0, 2);
+  while (split.has(k)) { if (n.length <= k.length) return ""; k = n.slice(0, k.length + 1); }
+  return k;
+}
+function trackHits(s: string, room: number, then: () => void): Hit[] {
+  const key = titleKey(s, then); if (key === null) return [];
+  if (key === "") return [{ label: "keep typing to find tracks by title…", kind: "TRACK", go: () => undefined }];
+  const sh = titleShelf(key, then); if (!sh) return [];
+  // the closest titles first: an exact one, then the shortest that start with what's typed
+  const n = normT(s), raw = s.toLowerCase(), got: number[] = [], out: Hit[] = [];
+  for (let j = 0; j < sh.t.length && got.length < 400; j++) if (key === "_" ? sh.t[j].toLowerCase().includes(raw) : sh.norm[j].startsWith(n)) got.push(j);
+  got.sort((x, y) => sh.norm[x].length - sh.norm[y].length);
+  for (const j of got.slice(0, room)) {
+    const st = sh.s[j], i = sh.i[j], star = galaxy.stars[st];
+    out.push({ label: `${sh.t[j]} — ${sh.n[sh.a[j]]}`, kind: i < 0 ? "TRACK · VAULT" : "TRACK", color: star?.color,
+      go: () => (i >= 0 ? tracks.load(st).then(() => select({ kind: "track", s: st, i }, true, true)) : adopt(st, -1 - i).then((ti) => select({ kind: "track", s: st, i: ti }, true, true))) });
+  }
+  return out;
+}
+
 function choose(i: number) { hits[i]?.go(); res.hidden = true; q.value = ""; q.blur(); }
 export const searchInput = () => q;
 export function closeSearch() { q.blur(); res.hidden = true; }
@@ -35,12 +77,14 @@ export function initSearch() {
     galaxy.nebulae.forEach((n, k) => { if (n.name.toLowerCase().includes(s)) hits.push({ label: n.name, kind: "GALAXY", color: n.color, go: () => flyToNebula(k) }); });
     stars.forEach((st, i) => { if (st.name.toLowerCase().includes(s)) hits.push({ label: st.name, kind: "STAR", color: st.color, go: () => select({ kind: "star", s: i }) }); });
     for (let i = 0; i < planets.length && hits.length < 14; i++) if (planets[i].name.toLowerCase().includes(s)) hits.push({ label: planets[i].name, kind: "PLANET", color: stars[planets[i].s].color, go: () => select({ kind: "planet", p: i }) });
-    if (artists) for (let i = 0; i < artists.length && hits.length < 24; i++) {
+    const again = () => q.dispatchEvent(new Event("input"));
+    hits.push(...trackHits(s, 10, again));
+    if (artists) for (let i = 0; i < artists.length && hits.length < 30; i++) {
       const [name, st, ti] = artists[i];
       if (name.toLowerCase().includes(s)) hits.push({ label: name, kind: "ARTIST", go: () => tracks.load(st).then(() => select({ kind: "track", s: st, i: ti })) });
     }
-    const shelf = vaultShelf(letterOf(s), () => q.dispatchEvent(new Event("input")));
-    if (shelf) for (let i = 0; i < shelf.length && hits.length < 30; i++) {
+    const shelf = vaultShelf(letterOf(s), again);
+    if (shelf) for (let i = 0; i < shelf.length && hits.length < 36; i++) {
       const [name, st, k] = shelf[i];
       if (name.toLowerCase().includes(s)) hits.push({ label: name, kind: "ARTIST · VAULT", go: () => adopt(st, k).then((ti) => select({ kind: "track", s: st, i: ti })) });
     }

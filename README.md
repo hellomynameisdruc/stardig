@@ -76,7 +76,7 @@ Sign in (Google or an email link) and you're a pilot with a generated pixel port
 
 | Key | |
 |:-:|---|
-| <kbd>/</kbd> | search by galaxy, style, label or artist |
+| <kbd>/</kbd> | search by galaxy, style, label, artist or track title |
 | <kbd>Space</kbd> | pause / play |
 | <kbd>→</kbd> <kbd>N</kbd> / <kbd>←</kbd> | next / previous track (the media keys and the Touch Bar work too) |
 | <kbd>L</kbd> | set a beacon |
@@ -153,7 +153,7 @@ Every push runs types, lint (ESLint, ruff) and tests for the site and the pipeli
 - [x] Lists saved as YouTube playlists
 - [x] Its own domain: [stardig.app](https://stardig.app/)
 - [ ] Public lists other pilots can follow
-- [ ] Search by track title
+- [x] Search by track title, the vault included
 - [ ] Live-video checks, so dead satellites go dark
 - [ ] A fresh map every month, straight from the new Discogs dump
 - [ ] A phone version made for touch

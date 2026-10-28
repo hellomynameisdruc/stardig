@@ -110,6 +110,11 @@ button.out { background: none; border: 0; border-bottom: 1px dotted var(--faint)
 .dacts .plot { flex: 1 1 calc(50% - 3px); margin-top: 0; padding: 6px 4px; font-size: var(--fs-s); letter-spacing: .1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .dacts .plot > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .dacts .outs { flex: 1 1 100%; justify-content: center }
+/* what a key does, in plain words, under its name */
+.sub { display: block; font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: 400; letter-spacing: .02em; text-transform: none; opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.play:has(.sub) { flex-direction: column; gap: 1px; padding: 7px 9px }
+.play .sub { opacity: 1; font-weight: 600; color: var(--inv-ink) }
+.plot .sub { margin-top: 2px }
 /* explanations fold away */
 .about { border: 1px dashed var(--line); padding: 6px 8px }
 .about summary { cursor: var(--cur-hand, pointer); font-family: var(--f-dot); font-size: var(--fs-xs); letter-spacing: .14em; color: var(--dim); list-style: none }

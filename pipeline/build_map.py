@@ -7,7 +7,8 @@
 
 Distances between stars depend on how often two styles appear on the same release.
 Sectors (pipeline/sectors.json) become galaxies: groups of stars on the same map.
-Writes the site's files into web/public/data/ (map.json, tracks/<star>.json, titles/<star>.json, artists.json).
+Writes the site's files into web/public/data/ (map.json, tracks/<star>.json, titles/<star>.json, artists.json,
+vault/, and search/ for finding tracks by title).
 
 The build is a chain of small steps (see build()); each one is a plain function over plain data,
 so they can be tested on a handful of fake releases (tests/test_build_map.py).
@@ -22,6 +23,8 @@ import random
 import zlib
 from collections import Counter, defaultdict
 from pathlib import Path
+
+from build_titles import build as build_titles
 
 import numpy as np
 
@@ -681,6 +684,7 @@ def main(src, out_dir, min_style, min_label, sample, only):
     print(f"Catalogue: {len(rel):,} releases in {len(sectors)} sectors")
     map_json, chunks, artists, vaults, vault_artists = build(rel, min_style, min_label, sample, sectors)
     write_outputs(out_dir, map_json, chunks, artists, vaults, vault_artists)
+    print(f"Title search: {build_titles(out_dir)}")
     gal = ", ".join(f"{g['name']} {g['stars']}" for g in map_json["galaxies"])
     print(f"Map ready: {len(map_json['stars'])} stars (≥ {min_style} releases) in galaxies [{gal}], "
           f"{len(map_json['planets']):,} planets, {map_json['meta']['tracks']:,} tracks on the map + {map_json['meta']['vault']:,} in the vault → {out_dir}")

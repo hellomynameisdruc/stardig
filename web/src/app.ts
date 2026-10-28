@@ -20,6 +20,7 @@ import { initInput } from "./ui/input";
 import { initWormhole } from "./ui/wormhole";
 import { initTheme } from "./ui/theme";
 import { initBriefing } from "./ui/briefing";
+import { initCoach } from "./ui/coach";
 import { initPilot } from "./ui/pilot";
 import { initBeta } from "./ui/beta";
 import { initModals } from "./ui/modal";
@@ -63,6 +64,7 @@ if (galaxy.meta.sample) { const b = $("sampleBanner"); b.hidden = false; b.oncli
 renderDossier(); renderLog(); renderBeacons(); paintBeaconKey(); ticker();
 startLoop();
 initBriefing();
+initCoach();
 document.fonts?.ready.then(() => { state.dirty = true; });
 
 // deep links: #test-<videoId> plays one video, #r<a>-<b> opens a route, #t<star>-<track> a track
