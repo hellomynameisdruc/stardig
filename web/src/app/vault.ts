@@ -7,7 +7,7 @@ import { VaultStore } from "../data/vault";
 import { galaxy, tracks } from "./state";
 
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));
-export const vault = new VaultStore(galaxy.meta.shard ?? 4000);
+const vault = new VaultStore(galaxy.meta.shard ?? 4000);
 const guests = galaxy.stars.map(() => new Map<number, number>()); // vault position → track index
 
 /** the planet whose vault range holds pos (or -1: the belt) */
@@ -52,5 +52,3 @@ export async function locateYt(s: number, yt: string, hint = -1): Promise<number
   return pos >= 0 ? adopt(s, pos) : -1;
 }
 
-/** how many tracks a planet has in all, drawn or not */
-export const planetTotal = (pi: number) => { const P = galaxy.planets[pi]; return P.t1 - P.t0 + (P.v?.[1] ?? 0); };

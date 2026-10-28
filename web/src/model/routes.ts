@@ -57,7 +57,7 @@ const poolOf = (g: Galaxy, st: number, used: Set<number>) => g.planetsByStar[st]
 const medianN = (g: Galaxy, pool: number[]) => { const ns = pool.map((i) => g.planets[i].n).sort((x, y) => x - y); return ns[ns.length >> 1] ?? 0; };
 
 /** an outer planet of `inStar` on the side facing `toward`, preferring labels that release both styles */
-export function gate(g: Galaxy, inStar: number, toward: number, used: Set<number>): number {
+function gate(g: Galaxy, inStar: number, toward: number, used: Set<number>): number {
   const S = g.stars[inStar], T = g.stars[toward], dx = T.x - S.x, dy = T.y - S.y, dl = Math.hypot(dx, dy) || 1;
   const pool = poolOf(g, inStar, used); if (!pool.length) return -1;
   const os = pool.map((i) => g.planets[i].o ?? 0).sort((x, y) => x - y), oCut = os[Math.floor(os.length * 0.55)] ?? 0;
@@ -75,7 +75,7 @@ export function gate(g: Galaxy, inStar: number, toward: number, used: Set<number
  * a waypoint near a point on the arc from planet `a` to planet `b` around their star
  * (polar interpolation; `dip` pulls the arc toward the star; `sweep` forces the long way round)
  */
-export function via(g: Galaxy, st: number, a: number, b: number, t: number, used: Set<number>, dip = 0.35, sweep = false, era?: [number, number]): number {
+function via(g: Galaxy, st: number, a: number, b: number, t: number, used: Set<number>, dip = 0.35, sweep = false, era?: [number, number]): number {
   const S = g.stars[st], A = g.planets[a], B = g.planets[b];
   const ra = Math.hypot(A.x - S.x, A.y - S.y), rb = Math.hypot(B.x - S.x, B.y - S.y);
   const ta = Math.atan2(A.y - S.y, A.x - S.x), tb = Math.atan2(B.y - S.y, B.x - S.x);
@@ -106,7 +106,7 @@ export function starEnd(g: Galaxy, st: number, toward: number, used: Set<number>
   return pi >= 0 ? pi : anyPlanet(g, st, used);
 }
 
-export const TOUR_STOPS = 10;
+const TOUR_STOPS = 10;
 /**
  * A tour of one star system, different every time: up to 10 labels drawn at random from the inner,
  * middle and outer orbits (the outer edge, where the smaller labels live, gets the most), then flown

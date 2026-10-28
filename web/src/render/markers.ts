@@ -7,11 +7,9 @@ import { labels } from "./labels";
 import { starSize } from "./pulsar";
 import { tempoLabel } from "../model/tempo";
 
-/** stars sit still (drawn on the static layer); planets and tracks move (live layer) */
-export const isMoving = (o: Sel) => !!o && (o.kind === "planet" || o.kind === "track");
 
 /** a selected planet at least this big on screen (radius, px) gets the full HUD round it */
-export const HUD_MIN = 34;
+const HUD_MIN = 34;
 export const hudFits = (r: number) => r >= HUD_MIN && r < Math.min(cam.W, cam.H) * 0.4;
 
 /**

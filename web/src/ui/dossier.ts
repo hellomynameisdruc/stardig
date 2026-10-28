@@ -36,7 +36,7 @@ const hist = (cnt: number[], y0: number, title: string) => {
   return `<div class="hist"><div class="ph-sub">${title}</div><div class="cols">${cnt.map((c, k) => `<i style="height:${(c / mx * 100).toFixed(1)}%" title="${y0 + k}: ${c}"></i>`).join("")}</div><div class="axis"><span>${y0}</span><span>${y0 + Math.round((y1 - y0) / 2)}</span><span>${y1}</span></div></div>`;
 };
 /** the same beacon mark as on the player's key */
-export const beaconLabel = (on: boolean) => (on ? `${ICON.beaconOn}<span>BEACON ON</span>` : `${ICON.beacon}<span>SET BEACON</span>`);
+const beaconLabel = (on: boolean) => (on ? `${ICON.beaconOn}<span>BEACON ON</span>` : `${ICON.beacon}<span>SET BEACON</span>`);
 
 function sector() {
   const { stars, planets, meta, ptype } = galaxy;

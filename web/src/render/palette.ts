@@ -20,7 +20,7 @@ export const sc = (si: number, a = 1) => `rgba(${SC[si][0]},${SC[si][1]},${SC[si
 /** star colour mixed toward white by k */
 export const mixW = (si: number, k: number, a: number) => `rgba(${SC[si].map((v) => Math.round(v + (255 - v) * k)).join(",")},${a})`;
 
-export function sprite(w: number, h: number, paint: (g: CanvasRenderingContext2D) => void) {
+function sprite(w: number, h: number, paint: (g: CanvasRenderingContext2D) => void) {
   const c = document.createElement("canvas"); c.width = w; c.height = h; paint(c.getContext("2d")!); return c;
 }
 /** soft glow per star (used instead of shadowBlur, which is slow) */
@@ -61,6 +61,6 @@ export const nebulaS = galaxy.nebulae.map((n) => {
     G.putImageData(img, 0, 0);
   });
 });
-export const NC = galaxy.nebulae.map((n) => rgbOf(n.color));
+const NC = galaxy.nebulae.map((n) => rgbOf(n.color));
 /** galaxy colour with alpha */
 export const nc = (k: number, a = 1) => `rgba(${NC[k][0]},${NC[k][1]},${NC[k][2]},${a})`;

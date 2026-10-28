@@ -1,7 +1,7 @@
 // The wordmark: the burst, then STARDIG in Martian Mono capitals — the same face as the credit line.
 // Drawn in the colour it sits in.
 /** the burst: sixteen rays, long and short in turn, round a bright core (the site's mark and favicon) */
-export function burstSvg(size: number) {
+function burstSvg(size: number) {
   let rays = "";
   for (let i = 0; i < 16; i++) {
     const a = (i / 16) * Math.PI * 2, r = i % 2 ? 8.7 : 14, c = Math.cos(a), s = Math.sin(a), f = (v: number) => v.toFixed(2);

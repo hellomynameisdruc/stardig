@@ -40,7 +40,7 @@ const paintRange = (el: HTMLInputElement) => el.style.setProperty("--p", `${(+el
 
 /** phones: the dock is a fixed sheet along the bottom, not a window to drag */
 const sheet = matchMedia("(max-width: 860px)");
-export function showDock() { dock.hidden = false; pill.hidden = true; document.body.classList.add("docked"); }
+function showDock() { dock.hidden = false; pill.hidden = true; document.body.classList.add("docked"); }
 
 /** the dock's beacon key reflects the track on air */
 export function paintBeaconKey() {
@@ -77,7 +77,7 @@ export function paintOdysseyTag() {
 }
 
 /** put a track on air */
-export function loadInDock(ref: TrackRef) {
+function loadInDock(ref: TrackRef) {
   const ch = chunk(ref.s)!;
   showDock();
   for (const id of ["playerBox", "dockPill"]) $(id).style.setProperty("--acc", galaxy.stars[ref.s].color);

@@ -1,7 +1,7 @@
 // Small per-visitor settings.
 import type { KV } from "./storage";
 
-export const PHOSPHORS = ["violet", "green", "amber"] as const;
+const PHOSPHORS = ["violet", "green", "amber"] as const;
 export type Phosphor = (typeof PHOSPHORS)[number];
 
 export class Prefs {

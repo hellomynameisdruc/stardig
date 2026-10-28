@@ -5,7 +5,7 @@
 import { esc } from "../core/util";
 import { onModal, topModal } from "./modal";
 
-export type Kind = "ok" | "err" | "info" | "mode" | "live";
+type Kind = "ok" | "err" | "info" | "mode" | "live";
 export type Act = { label: string; kbd?: string; run: () => void; hot?: boolean };
 type Item = { kind: Kind; html: string; acts?: Act[]; tag?: string; prio?: number };
 const modes = new Map<string, Item>();

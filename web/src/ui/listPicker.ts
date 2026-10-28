@@ -43,7 +43,7 @@ function place() {
   pop.style.left = `${o.left / z}px`; pop.style.top = `${o.top / z}px`;
 }
 
-export function closeListPicker() {
+function closeListPicker() {
   pop?.remove(); pop = null; anchor?.setAttribute("aria-expanded", "false"); anchor = null; cur = null;
 }
 

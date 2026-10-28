@@ -123,8 +123,8 @@ export function openPilot() {
   openModal($("pilotBox"), closePilot, { focus: document.getElementById("plMail") ?? document.getElementById("plGoogle") });
   wake(); // connect while the email is typed
 }
-export function closePilot() { closeModal($("pilotBox")); note = ""; confirmDelete = false; }
-export const pilotOpen = () => !$("pilotBox").hidden;
+function closePilot() { closeModal($("pilotBox")); note = ""; confirmDelete = false; }
+const pilotOpen = () => !$("pilotBox").hidden;
 
 export function initPilot() {
   paintButton();

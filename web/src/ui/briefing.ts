@@ -108,17 +108,17 @@ function build() {
   paintLogos();
 }
 
-export function openBriefing() {
+function openBriefing() {
   const el = $("brief"); if (!el.hidden) return;
   if (!el.firstChild) build();
   el.scrollTop = 0;
   openModal(el, closeBriefing, { focus: el.querySelector<HTMLElement>(".brief-foot .key"), keys: { Enter: closeBriefing, "?": closeBriefing } });
 }
-export function closeBriefing() {
+function closeBriefing() {
   const el = $("brief"); if (el.hidden) return;
   closeModal(el); browserKV.set(SEEN, "1");
 }
-export const briefingOpen = () => !$("brief").hidden;
+const briefingOpen = () => !$("brief").hidden;
 
 export function initBriefing() {
   $("help").onclick = openBriefing;

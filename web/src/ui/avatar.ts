@@ -12,8 +12,7 @@ export type Portrait = { tone: Int8Array; traits: string[] };
 
 /** a pilot's own look, kept by the sign of the avatar number: a negative one is the same portrait with
  *  black hair (under any headset) and a beard. Pilots set it in COMMS: /avatar beard (and /avatar back) */
-export const customLook = (avatar: number) => avatar < 0;
-export function portrait(avatar: number): Portrait {
+function portrait(avatar: number): Portrait {
   const custom = avatar < 0, seed = custom ? -avatar : avatar;
   const rnd = mulberry(seed * 2654435761 + 7);
   const pick = <V,>(opts: [V, number][]): V => { let s = opts.reduce((a, o) => a + o[1], 0) * rnd(); for (const [v, w] of opts) if ((s -= w) < 0) return v; return opts[0][0]; };
@@ -188,14 +187,19 @@ export function portrait(avatar: number): Portrait {
 
 const OPAC = ["", "0.3", "0.62", "1"];
 const cache = new Map<number, string>();
-/** the portrait's pixels as SVG rectangles, row runs merged; tone 0 is the background colour */
-function rects(seed: number) {
-  let s = cache.get(seed); if (s) return s;
-  const { tone } = portrait(seed); s = "";
+/** pixels as SVG rectangles, row runs merged; tone 0 is left to the background */
+function toneRects(tone: Int8Array) {
+  let s = "";
   for (let y = 0; y < N; y++) {
     let x = 0;
     while (x < N) { const t = tone[y * N + x]; let e = x + 1; while (e < N && tone[y * N + e] === t) e++; if (t > 0) s += `<rect x="${x}" y="${y}" width="${e - x}" height="1"${t < 3 ? ` opacity="${OPAC[t]}"` : ""}/>`; x = e; }
   }
+  return s;
+}
+/** the portrait's pixels as SVG rectangles, row runs merged; tone 0 is the background colour */
+function rects(seed: number) {
+  let s = cache.get(seed); if (s) return s;
+  s = toneRects(portrait(seed).tone);
   if (cache.size > 300) cache.clear();
   cache.set(seed, s); return s;
 }
@@ -227,9 +231,7 @@ function systemRects() {
   }
   box(15, 15, 16, 17, 3, 3);
   for (let x = 10; x <= 21; x += 2) box(x, 24, x, 26, 3, 3);         // the speaker grille, lit
-  let s = "";
-  for (let y = 0; y < N; y++) { let x = 0; while (x < N) { const t = tone[y * N + x]; let e = x + 1; while (e < N && tone[y * N + e] === t) e++; if (t > 0) s += `<rect x="${x}" y="${y}" width="${e - x}" height="1"${t < 3 ? ` opacity="${OPAC[t]}"` : ""}/>`; x = e; } }
-  return (sysRects = s);
+  return (sysRects = toneRects(tone));
 }
 export function systemAvatarSvg(size = 48, cls = "ava sys") {
   return `<svg class="${cls}" width="${size}" height="${size}" viewBox="0 0 ${N} ${N}" fill="currentColor" aria-hidden="true"><rect width="${N}" height="${N}" style="fill:var(--bg)"/>${systemRects()}</svg>`;

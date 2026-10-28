@@ -3,8 +3,8 @@
 // The library is only fetched when it is needed: a signed-in visitor, a sign-in link, or COMMS opened.
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const CLOUD_URL = "https://muuaqquhqgthkfzlqkvq.supabase.co";
-export const CLOUD_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11dWFxcXVocWd0aGtmemxxa3ZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NzIwNjIsImV4cCI6MjEwODM0ODA2Mn0.AksqrtNhZsdUJTMj04UDPpsXezaWqsIlK6w_4mAfFYk";
+const CLOUD_URL = "https://muuaqquhqgthkfzlqkvq.supabase.co";
+const CLOUD_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11dWFxcXVocWd0aGtmemxxa3ZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NzIwNjIsImV4cCI6MjEwODM0ODA2Mn0.AksqrtNhZsdUJTMj04UDPpsXezaWqsIlK6w_4mAfFYk";
 const TOKEN_KEY = "sb-muuaqquhqgthkfzlqkvq-auth-token";
 
 let client: Promise<SupabaseClient> | null = null;

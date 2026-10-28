@@ -8,7 +8,7 @@ import { lookup, roster } from "./pilots";
 export const ALL = "all";
 const KEEP = 80;
 /** COMMS shows the last day: older messages aren't loaded, and drop off while the page stays open */
-export const HISTORY_MS = 24 * 3600 * 1000;
+const HISTORY_MS = 24 * 3600 * 1000;
 const since = () => new Date(Date.now() - HISTORY_MS).toISOString();
 /** reply_to: the message this one answers */
 /** pilot null: the station itself (SYSTEM), e.g. welcoming a new pilot */

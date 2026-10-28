@@ -13,14 +13,14 @@ const PLANET_PERIOD = 360;
 /** a satellite's period at the planet's surface, seconds (Kepler: farther = slower) */
 const SAT_PERIOD = 46;
 
-export const emptyOrbit = (n: number): Orbit => ({ d: new Float32Array(n), th: new Float32Array(n), ci: new Float32Array(n), si: new Float32Array(n), cO: new Float32Array(n), sO: new Float32Array(n), w: new Float32Array(n) });
+const emptyOrbit = (n: number): Orbit => ({ d: new Float32Array(n), th: new Float32Array(n), ci: new Float32Array(n), si: new Float32Array(n), cO: new Float32Array(n), sO: new Float32Array(n), w: new Float32Array(n) });
 
 /**
  * Satellites orbit their planet on tilted circular orbits with random orientations, which makes a
  * spherical swarm. Seeded per planet, so every visitor sees the same sky and planets can be filled
  * in any order (only the ones on screen, the first time they appear).
  */
-export function fillPlanetOrbits(g: Galaxy, o: Orbit, pi: number, ch: Chunk) {
+function fillPlanetOrbits(g: Galaxy, o: Orbit, pi: number, ch: Chunk) {
   const P = g.planets[pi], r1 = lcg(1 + pi * 7919);
   for (let i = P.t0; i < P.t1; i++) {
     const dx = ch.x[i] - P.x, dy = ch.y[i] - P.y, d = Math.hypot(dx, dy);
@@ -31,12 +31,6 @@ export function fillPlanetOrbits(g: Galaxy, o: Orbit, pi: number, ch: Chunk) {
 }
 
 /** all satellite orbits of a star at once (tests, tools) */
-export function buildOrbit(g: Galaxy, s: number, ch: Chunk): Orbit {
-  const o = emptyOrbit(ch.x.length);
-  for (const pi of g.planetsByStar[s]) fillPlanetOrbits(g, o, pi, ch);
-  return o;
-}
-
 export class Motion {
   /** angular speed of each planet (rad/s); a whole band turns together, so planets never collide */
   readonly pOmega: number[];

@@ -119,18 +119,21 @@ function spinOf(i: number, t: number) {
   return ((t - t0) / period) * Math.PI * 2;
 }
 
+/** where each drawn planet is this frame (planetPos hands back a shared object) */
+const posX = new Float64Array(galaxy.planets.length), posY = new Float64Array(galaxy.planets.length);
 export function drawPlanets(ctx: CanvasRenderingContext2D, t: number) {
   if (cam.s < LOD_PLANETS) return;
   const { stars, planets, planetsByStar } = galaxy;
+  // each planet's place is worked out once a frame (it was asked for three times)
   const vis: number[] = [];
   stars.forEach((st, si) => {
     if (!inView(st.x, st.y, st.R)) return;
-    for (const i of planetsByStar[si]) { const q = motion.planetPos(i, t); if (inLive(q.x, q.y, planets[i].r * 3)) vis.push(i); }
+    for (const i of planetsByStar[si]) { const q = motion.planetPos(i, t); if (inLive(q.x, q.y, planets[i].r * 3)) { vis.push(i); posX[i] = q.x; posY[i] = q.y; } }
   });
   const focus = focusPlanets();
   for (const k of spinFrom.keys()) if (!focus.has(k)) spinFrom.delete(k);
   for (const i of vis) {
-    const pl = planets[i], q = motion.planetPos(i, t), p = cam.toScreen(q.x, q.y), r = Math.max(1.5, pl.r * cam.s);
+    const pl = planets[i], p = cam.toScreen(posX[i], posY[i]), r = Math.max(1.5, pl.r * cam.s);
     if (r < 3) { ctx.fillStyle = sc(pl.s, 0.95); ctx.fillRect(Math.round(p.x - 1), Math.round(p.y - 1), 2, 2); continue; }
     // the planet you are at turns (drawn live, a handful at most); the rest stay still as cached sprites
     if (r > 180 || focus.has(i)) { drawPlanetBody(ctx, i, p.x, p.y, r, focus.has(i) ? spinOf(i, t) : 0, 0); continue; }
@@ -143,7 +146,7 @@ export function drawPlanets(ctx: CanvasRenderingContext2D, t: number) {
   for (const i of vis) {
     const pl = planets[i], r = pl.r * cam.s; if (r < 4) continue;
     if (state.sel?.kind === "planet" && state.sel.p === i && hudFits(r)) continue; // its name is on the HUD
-    const q = motion.planetPos(i, t), p = cam.toScreen(q.x, q.y);
+    const p = cam.toScreen(posX[i], posY[i]);
     labels.label(pl.name.toUpperCase(), p.x, p.y + r + 14, 11, sc(pl.s, 0.85));
   }
 }

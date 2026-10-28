@@ -6,11 +6,11 @@ import { cloud } from "./client";
 
 /** access: the closed beta lets this pilot in */
 export type Pilot = { id: string; nick: string; avatar: number; rank?: string; admin?: boolean; access?: boolean };
-export const NICK = /^[A-Za-z0-9_.-]{3,20}$/;
+const NICK = /^[A-Za-z0-9_.-]{3,20}$/;
 
 /** the pilot columns to read; without ranks if the database hasn't got them yet */
 let COLS = "id,nick,avatar,rank,admin,access";
-export async function readPilots<T>(q: (cols: string) => PromiseLike<{ data: T; error: { message: string } | null }>) {
+async function readPilots<T>(q: (cols: string) => PromiseLike<{ data: T; error: { message: string } | null }>) {
   let r = await q(COLS);
   if (r.error && /access/.test(r.error.message) && COLS.endsWith(",access")) { COLS = "id,nick,avatar,rank,admin"; r = await q(COLS); }
   if (r.error && /rank|admin/.test(r.error.message) && COLS !== "id,nick,avatar") { COLS = "id,nick,avatar"; r = await q(COLS); }

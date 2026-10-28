@@ -59,7 +59,7 @@ export function select(o: Sel, go = true, autoplay = false) {
 }
 
 // ---------- playback ----------
-export function playTrack(ref: TrackRef) {
+function playTrack(ref: TrackRef) {
   if (galaxy.meta.sample) return;
   if (!starOpen(ref.s)) { ui.locked(ref.s); return; } // closed beta: this galaxy needs access
   const ch = chunk(ref.s)!;
@@ -75,7 +75,7 @@ export function playTrack(ref: TrackRef) {
 }
 
 /** how many asteroid-belt tracks (no label) a star has: the drawn rocks and the ones in the vault */
-export const beltDrawn = (si: number) => galaxy.stars[si].tracks - galaxy.planetsByStar[si].reduce((a, p) => a + galaxy.planets[p].t1 - galaxy.planets[p].t0, 0);
+const beltDrawn = (si: number) => galaxy.stars[si].tracks - galaxy.planetsByStar[si].reduce((a, p) => a + galaxy.planets[p].t1 - galaxy.planets[p].t0, 0);
 export const beltSize = (si: number) => beltDrawn(si) + (galaxy.stars[si].bv?.[1] ?? 0);
 
 /**
@@ -176,7 +176,7 @@ export function engageOrbit(pi: number) {
 export function toggleBeacon(r: TrackRef | null) { beacons.toggle(r, r ? galaxy.stars[r.s]?.name : undefined); }
 
 // ---------- routes ----------
-export async function buildRoute(a: number, b: number) {
+async function buildRoute(a: number, b: number) {
   // the course itself is instant; show it and fly out at once, then tune in the stops' tracks
   // (their systems' track files may still be on the way)
   const plan = planRoute(galaxy, a, b);

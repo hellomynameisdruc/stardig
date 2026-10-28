@@ -9,19 +9,19 @@ import { paintOdysseyTag } from "./dock";
 import { clearMode, say, setMode } from "./rail";
 import { provide } from "../app/ports";
 
-export function showPickHint(fromName: string) {
+function showPickHint(fromName: string) {
   setMode("pick", `ODYSSEY FROM <b>${esc(fromName.toUpperCase())}</b> · CLICK A DESTINATION PLANET OR STAR`, [{ label: "CANCEL", kbd: "ESC", run: endPick }]);
 }
-export function hidePickHint() { clearMode("pick"); }
+function hidePickHint() { clearMode("pick"); }
 /** a click inside the origin's own system: HAL 9000 keeps the pod bay doors shut */
-export function denyPick(starName: string) {
+function denyPick(starName: string) {
   say(`I'm sorry. I'm afraid I can't do that. ${starName} is where the odyssey starts`, "err");
 }
 
 /** width the panel takes on wide screens, so the camera can keep the route clear of it */
-export function routePanelWidth() { const box = $("routeBox"); return cam.W > 700 && !box.hidden ? box.offsetWidth + 20 : 0; }
+function routePanelWidth() { const box = $("routeBox"); return cam.W > 700 && !box.hidden ? box.offsetWidth + 20 : 0; }
 
-export function renderRoutePanel() {
+function renderRoutePanel() {
   const box = $("routeBox"), r = state.route; paintOdysseyTag(); if (!r) { box.hidden = true; return; }
   const { planets, stars } = galaxy, A = planets[r.a], B = planets[r.b];
   box.hidden = false; box.style.setProperty("--acc", stars[A.s].color);
