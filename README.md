@@ -10,7 +10,7 @@
 
 <p align="center">
   <b>Galaxies are genres · stars are styles · planets are labels · satellites are tracks.</b><br>
-  Fly through 2.1 million tracks of electronic music, from whole genres down to a single record, and listen as you go.
+  Fly through nearly 4 million tracks of electronic music, from whole genres down to a single record, and listen as you go.
 </p>
 
 <p align="center">
@@ -21,10 +21,10 @@
 
 ## The universe at a glance
 
-| Galaxies | Stars | Planets | Satellites | Releases | Years |
-|:-:|:-:|:-:|:-:|:-:|:-:|
-| **13** | **128** | **20,488** | **2,115,206** | **1,143,694** | **1980–2026** |
-| genres | styles | labels | tracks | from Discogs | of music |
+| Galaxies | Stars | Planets | Satellites | In the vault | Releases | Years |
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| **13** | **128** | **20,488** | **2,115,206** | **+1,819,596** | **1,143,694** | **1980–2026** |
+| genres | styles | labels | tracks on the map | more, all playable | from Discogs | of music |
 
 House · Techno · Disco · Trance · Drum n Bass · Ambient · Downtempo · Experimental · Electro · Synth & Wave · UK Bass · Hardcore · Eurodance
 
@@ -36,7 +36,8 @@ House · Techno · Disco · Trance · Drum n Bass · Ambient · Downtempo · Exp
 | ⭐ **Star** | A Discogs style (Deep House, Acid, Dub Techno…). Its size is how many releases the style has, its glow is how alive it is today, and it **pulses at the style's typical tempo**, shedding a shell every bar. |
 | 🪐 **Planet** | A label, orbiting its main style. Five kinds: **gas giants** (the biggest labels), **ringed worlds** (15+ years of releases), **cratered** (went quiet before 2001), **ice worlds** (started after 2010) and **terrestrial**. |
 | 🛰️ **Satellites** | The label's tracks, older ones closer in. Up to 250 per planet, spread evenly over the label's whole history. |
-| ☄️ **Asteroid belt** | Releases with no label or from very small ones, at the edge of each system. |
+| ☄️ **Asteroid belts** | Releases with no label or from very small ones: up to three belts per system, one per era, lying between the planet bands. **DIG** one and it hands you a random rock to play; every rock dug up counts as ore. |
+| 🗄️ **The vault** | The 1.8 million tracks that don't fit on a planet's orbits. Stations, belts and search reach into it, and a track from the vault joins the map while it plays. |
 
 ## Three phosphors, one cosmos
 
@@ -59,10 +60,17 @@ House · Techno · Disco · Trance · Drum n Bass · Ambient · Downtempo · Exp
 - **Time warp**: on a planet, the label's story in order, one track a year from its first release to its last; defunct labels end on their last transmission.
 - **Solaris station**: on a planet, park a radio station in its orbit: an endless radio of that label, and the player counts how many of its tracks you've heard.
 - **Wormhole**: a jump to a random point in the cosmos. The signal scope in the dossier rides the jump with you.
-- **Beacons**: mark the tracks you love. The **flight log** keeps your listening history. Both stay in your browser.
-- **Share**: the address bar always holds a link to the current track or odyssey.
+- **Beacons and lists**: mark the tracks you love, and sort tracks into your own named lists. A list saves as a real **playlist in your own YouTube** in one click (and later adds only what's new).
+- **Flight log**: what you played on this visit; every flight still counts towards your rank.
+- **Share**: copy a track's link, or send it to COMMS, where it shows as a card anyone can play.
 
-<img align="right" src="docs/media/mobile.png" alt="stardig on a phone" width="220">
+### Pilots and COMMS
+
+Sign in (Google or an email link) and you're a pilot with a generated pixel portrait. Your beacons, lists, flight count and ore follow you to every device.
+
+- **COMMS**: the open channel, the last 24 hours of it. Reactions (♥ ▲ ◎ ✦), replies, and shared tracks as playable cards. **SYSTEM**, the station's own voice, welcomes every new pilot.
+- **Ranks**: earned by digging, by flights logged *or* ore mined: Cadet → Pilot → Navigator → Captain → Commander → Star Admiral. DJ, Digger and Warden are given by hand.
+- **Fleets**: go on air and others tune in to hear what you play, with a fleet chat of their own.
 
 ### Keyboard
 
@@ -70,17 +78,17 @@ House · Techno · Disco · Trance · Drum n Bass · Ambient · Downtempo · Exp
 |:-:|---|
 | <kbd>/</kbd> | search by galaxy, style, label or artist |
 | <kbd>Space</kbd> | pause / play |
-| <kbd>N</kbd> | next nearby track |
+| <kbd>→</kbd> <kbd>N</kbd> / <kbd>←</kbd> | next / previous track (the media keys and the Touch Bar work too) |
 | <kbd>L</kbd> | set a beacon |
+| <kbd>⇧</kbd> <kbd>L</kbd> | put the track in one of your lists |
+| <kbd>D</kbd> | dig the asteroid belt |
 | <kbd>W</kbd> | wormhole |
 | <kbd>H</kbd> | back to the full sector |
 | <kbd>Esc</kbd> | back |
 
-### On a phone
+### Closed beta, on a computer
 
-The map works with one and two fingers. While music plays, the player becomes a sheet along the bottom of the screen and the map gets the rest.
-
-<br clear="right">
+stardig is in a closed beta: the House star is open to everyone, the rest of the map opens with access (an invite code, or a nod from the founder). It's made for a big screen and a keyboard, so for now phones get a card asking to come back on a computer.
 
 ## Where the data comes from
 
@@ -115,7 +123,8 @@ web/src/
   model/     pure logic: galaxy (planet types, star classes, tempo), motion (orbits), routes
   data/      fetching the map and each star's tracks
   store/     the visitor's own data: beacons, flight log, prefs
-  cloud/     accounts and live data (Supabase): pilots, COMMS, fleets, the synced logbook
+  cloud/     accounts and live data (Supabase): pilots, COMMS, fleets, the synced logbook,
+             saving lists to YouTube
   app/       shared state, actions (select, play, next, plot an odyssey, wormhole), and the
              ports: what actions ask of the UI, filled in by the UI (so nothing imports in a circle)
   render/    camera, palette, layers, pulsars, planets, satellites, route line, picking
@@ -123,7 +132,8 @@ web/src/
              overlays, search, input, effects
   styles/    tokens (type sizes, colours, layers), then one file per part of the terminal
 web/test/    Vitest
-web/e2e/     two browsers against a stand-in for Supabase: fleets, tune in, fleet chat
+web/e2e/     browsers against a stand-in for Supabase: fleets and tune-in, and a load test
+             (a long log, a full chat, phone and laptop) that must pass before every deploy
 pipeline/    Python: parse → catalogue → map, with pytest
 supabase/    the database: tables, rules, live channels (schema.sql)
 ```
@@ -137,12 +147,16 @@ Every push runs types, lint (ESLint, ruff) and tests for the site and the pipeli
 
 ## Next on the flight plan
 
-- [ ] Accounts: beacons and flight log synced between devices, public beacon collections
+- [x] Accounts: beacons, lists and flight count synced between devices
+- [x] New galaxies: Downtempo, Experimental, Electro, Synth & Wave, UK Bass, Hardcore, Eurodance
+- [x] Every track playable: the vault behind the map
+- [x] Lists saved as YouTube playlists
+- [x] Its own domain: [stardig.app](https://stardig.app/)
+- [ ] Public lists other pilots can follow
 - [ ] Search by track title
 - [ ] Live-video checks, so dead satellites go dark
-- [x] New galaxies: Downtempo, Experimental, Electro, Synth & Wave, UK Bass, Hardcore, Eurodance
 - [ ] A fresh map every month, straight from the new Discogs dump
-- [ ] Its own domain
+- [ ] A phone version made for touch
 
 ---
 
