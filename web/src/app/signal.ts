@@ -10,7 +10,9 @@ export function signalHash(s: number, i: number) {
   const ch = chunk(s); if (!ch) return "";
   return `#sig-${ch.yt[i]}.${encodeURIComponent(galaxy.stars[s].name)}`;
 }
-export const signalLink = (s: number, i: number) => `${location.origin}${location.pathname}${signalHash(s, i)}`;
+/** the observatory's address (the folder the page is in: comms.html shares links to the map, not to itself) */
+const home = () => new URL("./", location.href).href;
+export const signalLink = (s: number, i: number) => `${home()}${signalHash(s, i)}`;
 
 export function parseSignal(text: string): Signal | null {
   const m = text.match(SIG); if (!m) return null;

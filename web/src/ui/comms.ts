@@ -1,25 +1,26 @@
 // The COMMS panel: three channels in the panel under the dossier — ALL (the open channel), FLEET (the
 // fleet you're in, while you're in one) and ON AIR (broadcasts to tune in to). New messages count up on
-// the tab while it's closed. Commands start with "/": /ranks, and the founder's /rank CALLSIGN RANK,
-// /approve and /revoke CALLSIGN, /invite [PILOTS] (the closed beta).
+// the tab while it's closed. Commands start with "/" (ui/commands.ts).
 // The messages themselves live in cloud/comms.ts, the fleets in cloud/fleet.ts.
-import { esc, pad } from "../core/util";
+import { esc } from "../core/util";
 import { $ } from "../core/dom";
-import { ALL, clearInvites, dropRoom, goLive, grantRank, loadRoom, messageById, messages, onComms, REACTIONS, reactionsOf, remove, report, systemSay, toggleReaction, transmit, type Msg } from "../cloud/comms";
-import { approveAll, crewCount, grantAccess, newPortrait, lookup, makeInvite, onPilot, pilot, roster, waitingPilots, wake } from "../cloud/pilots";
+import { ALL, clearInvites, dropRoom, goLive, loadRoom, messages, onComms, remove, report, toggleReaction, transmit, type Msg } from "../cloud/comms";
+import { crewCount, lookup, onPilot, pilot, roster, wake } from "../cloud/pilots";
 import { setCrew } from "./ticker";
 import { beta } from "../app/beta";
 import { ui } from "../app/ports";
 import { fleet, fleetRoom, inviteLink, known, leave, onFleet, tuneIn, watchOnAir } from "../cloud/fleet";
-import { chunk, galaxy, tracks } from "../app/state";
+import { chunk, galaxy } from "../app/state";
 import { select } from "../app/actions";
-import { find, parseSignal, placed, signalLink, withoutSignal } from "../app/signal";
+import { find, parseSignal, placed, withoutSignal } from "../app/signal";
 import { avatarSvg, systemAvatarSvg } from "./avatar";
 import { openPilot } from "./pilot";
-import { EARNED, GIVEN, isStaff, rankKey, rankOf, rankTag, RANKS } from "./ranks";
+import { isStaff, rankOf } from "./ranks";
 import { flashKey, say } from "./rail";
 import { copyInvite } from "./fleet";
 import { ICON } from "./dock";
+import { runCommand, waitingNote } from "./commands";
+import { goToMessage, nameTag, paintReplyBar, quote, reactionRow, sysHead, time } from "./commsView";
 
 type View = "all" | "fleet" | "air";
 let view: View = "all", started = false, unread = 0;
@@ -29,11 +30,6 @@ const room = () => (view === "fleet" ? fleetRoom() : ALL);
 const seen = () => !$("comms").hidden && !document.hidden;
 
 // —— drawing
-const time = (iso: string) => { const d = new Date(iso); return `${pad(d.getHours(), 2)}:${pad(d.getMinutes(), 2)}`; };
-function nameTag(p: { nick?: string; rank?: string } | undefined) {
-  const k = rankOf(p?.rank);
-  return `${rankTag(p?.rank)}<b${k.color ? ` style="color:${k.color}"` : ""}>${esc((p?.nick ?? "PILOT").toUpperCase())}</b>`;
-}
 // Each shared track still being looked up asks for ONE repaint when it's found, and repaints are batched
 // into one per frame. (Asking on every paint made each paint ask again: the repaints multiplied until
 // the page froze.)
@@ -90,7 +86,7 @@ const looked = new Set<string>();
 /** a word from the station itself: a new pilot in the ranks */
 function sysLine(m: Msg) {
   const act = pilot.me && isStaff(pilot.me) ? `<button class="m-x" data-del="${m.id}" aria-label="Delete the message" title="Delete">×</button>` : "";
-  return `<div class="msg sys" data-mid="${m.id}">${systemAvatarSvg(32)}<div class="m-b"><span class="m-h"><span class="rk" style="--rk:var(--red)" title="The station">◆ SYS</span><b class="sys-n">SYSTEM</b><time>${time(m.created_at)}</time>${act}</span>${parseSignal(m.body) ? `<span class="m-t">◆ A SIGNAL FROM THE STATION</span>` : ""}${body(m.body)}${reactionRow(m)}</div></div>`;
+  return `<div class="msg sys" data-mid="${m.id}">${systemAvatarSvg(32)}<div class="m-b">${sysHead(m, act)}${parseSignal(m.body) ? `<span class="m-t">◆ A SIGNAL FROM THE STATION</span>` : ""}${body(m.body)}${reactionRow(m)}</div></div>`;
 }
 function line(m: Msg) {
   if (!m.pilot) return sysLine(m);
@@ -98,13 +94,7 @@ function line(m: Msg) {
   const act = !pilot.me ? "" : mine || isStaff(pilot.me)
     ? `<button class="m-x" data-del="${m.id}" aria-label="Delete the message" title="Delete">×</button>`
     : `<button class="m-x" data-rep="${m.id}" aria-label="Report this message" title="${reported.has(m.id) ? "Reported" : "Report"}" ${reported.has(m.id) ? "disabled" : ""}>!</button>`;
-  return `<div class="msg${mine ? " mine" : ""}${replyTo === m.id ? " replying" : ""}" data-mid="${m.id}">${avatarSvg(p?.avatar ?? 0, 32)}<div class="m-b"><span class="m-h">${nameTag(p)}<time>${time(m.created_at)}</time>${act}</span>${quote(m)}${body(m.body, p?.nick)}${reactionRow(m)}</div></div>`;
-}
-/** what a message answers: a line quoting it (a click scrolls to it) */
-function quote(m: Msg) {
-  if (!m.reply_to) return "";
-  const q = messageById(m.reply_to), who = !q ? "" : !q.pilot ? "SYSTEM" : roster.get(q.pilot)?.nick ?? "PILOT";
-  return `<button type="button" class="m-q" data-goto="${m.reply_to}">↩ ${q ? `<b>${esc(who.toUpperCase())}</b> ${esc(snippet(q.body))}` : "AN EARLIER MESSAGE"}</button>`;
+  return `<div class="msg${mine ? " mine" : ""}${replyTo === m.id ? " replying" : ""}" data-mid="${m.id}">${avatarSvg(p?.avatar ?? 0, 32)}<div class="m-b"><span class="m-h">${nameTag(p)}<time>${time(m.created_at)}</time>${act}</span>${quote(m, snippet)}${body(m.body, p?.nick)}${reactionRow(m)}</div></div>`;
 }
 /** a message in a few words: a shared track by its title */
 function snippet(text: string) {
@@ -113,27 +103,8 @@ function snippet(text: string) {
   if (/#fleet-/.test(text)) return "an invite to a fleet";
   return text.length > 60 ? `${text.slice(0, 60)}…` : text;
 }
-/** the reactions under a message (mine lit), and on hover the keys to react and to reply */
-function reactionRow(m: Msg) {
-  const me = pilot.me?.id, got = reactionsOf(m.id);
-  const chips = Object.entries(REACTIONS).flatMap(([k, r]) => {
-    const who = got?.get(k); if (!who?.size) return [];
-    const names = [...who].map((id) => roster.get(id)?.nick ?? "pilot").join(", ");
-    return [`<button type="button" class="rx${me && who.has(me) ? " on" : ""}" data-rx="${m.id}:${k}" title="${esc(r.name)}: ${esc(names)}">${r.glyph} ${who.size}</button>`];
-  }).join("");
-  const keys = !pilot.me ? "" : `<span class="m-acts">${Object.entries(REACTIONS).map(([k, r]) => `<button type="button" class="rx-k" data-rx="${m.id}:${k}" title="${esc(r.name)}" aria-label="${esc(r.name)}">${r.glyph}</button>`).join("")}<button type="button" class="rx-k rp" data-reply="${m.id}" title="Reply" aria-label="Reply">↩ REPLY</button></span>`;
-  return chips || keys ? `<div class="m-rx">${chips}${keys}</div>` : "";
-}
 let replyTo: number | null = null;
-/** the bar over the input while replying */
-function paintReply() {
-  let bar = document.getElementById("commsReply");
-  if (!bar) { bar = document.createElement("div"); bar.id = "commsReply"; bar.className = "comms-reply"; $("commsForm").before(bar); bar.addEventListener("click", act); }
-  const q = replyTo ? messageById(replyTo) : null;
-  if (!q) { replyTo = null; bar.hidden = true; return; }
-  bar.hidden = false;
-  bar.innerHTML = `<span>↩ REPLYING TO <b>${esc((!q.pilot ? "SYSTEM" : roster.get(q.pilot)?.nick ?? "PILOT").toUpperCase())}</b> · ${esc(snippet(q.body))}</span><button type="button" class="key icon sm" data-unreply aria-label="Cancel the reply">×</button>`;
-}
+function paintReply() { if (!paintReplyBar(replyTo, snippet, act)) replyTo = null; }
 function airList() {
   if (!fleet.hosts.length) return `<p class="note">NOBODY IS BROADCASTING RIGHT NOW. START ONE WITH <span class="ico-in">${ICON.cast}</span> IN THE PLAYER.</p>`;
   return fleet.hosts.map((raw) => {
@@ -177,10 +148,7 @@ const tell = (text: string, kind: "err" | "info" = "err") => { note = { text: te
 /** the founder's list of pilots waiting for access, as a note in COMMS */
 export async function showWaiting() {
   document.getElementById("tabComms")?.click(); // the COMMS tab, where the note shows
-  const list = await waitingPilots();
-  if (!list) { tell("Could not read the registry (has the closed-beta SQL been run?)"); return; }
-  const ago = (t: string) => { const m = Math.round((Date.now() - Date.parse(t)) / 60000); return m < 60 ? `${m}m` : m < 2880 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`; };
-  tell(list.length ? `Waiting for access (${list.length}): ${list.map((p) => `${p.nick} · ${ago(p.created_at)}`).join(" / ")}. Let one in: /approve CALLSIGN` : "Nobody is waiting for access", "info");
+  const [text, kind] = await waitingNote(); tell(text, kind);
 }
 
 // —— doing
@@ -195,73 +163,16 @@ async function send() {
   const inp = $<HTMLInputElement>("commsIn"), text = inp.value.trim(), r = room();
   if (!pilot.me) { openPilot(); return; }
   if (!text || !r) return;
-  if (text.startsWith("/")) { await command(text); return; }
+  if (text.startsWith("/")) {
+    await runCommand(text, { tell, done: (said) => { inp.value = ""; note = null; paint(); if (said) say(said); } });
+    return;
+  }
   if (!beta.open) { tell("Closed beta: COMMS opens once you have access. Enter an invite in your pilot card"); return; }
   inp.disabled = true;
   const e = await transmit(r, text, replyTo);
   inp.disabled = false; inp.focus();
   if (e) { tell(e === "too-fast" ? "Too fast. One message every few seconds" : "Transmission failed. Try again"); return; }
   inp.value = ""; note = null; replyTo = null; paint(); $("commsList").scrollTop = $("commsList").scrollHeight;
-}
-
-/** the console: /ranks lists them; /rank CALLSIGN RANK (the founder) gives one */
-async function command(text: string) {
-  const inp = $<HTMLInputElement>("commsIn"), [cmd, nick, ...rest] = text.slice(1).trim().split(/\s+/);
-  if (cmd === "ranks" || cmd === "help") { inp.value = ""; tell(`Earned by digging: ${EARNED.map((e) => RANKS[e.rank].label).join(" › ")}. Given by the founder: ${GIVEN.map((k) => RANKS[k].label).join(" · ")} (/rank CALLSIGN RANK). Closed beta: /waiting · /approve CALLSIGN · /approve all · /revoke CALLSIGN · /invite [PILOTS]. SYSTEM: /sys TEXT · /tip [STYLE] · /pilots · /welcome CALLSIGN. Your portrait: /avatar beard · /avatar back`, "info"); return; }
-  // the closed beta (the founder): let a pilot in or out, make an invite code
-  if (cmd === "waiting") { inp.value = ""; await showWaiting(); return; }
-  if (cmd === "approve" && nick?.toLowerCase() === "all") {
-    const res = await approveAll();
-    if ("error" in res) { tell(res.error === "not-authorised" ? "Only the founder lets pilots in" : res.error === "missing" ? "/approve all needs stardig-system.sql run in Supabase" : `Failed: ${res.error}`); return; }
-    inp.value = ""; note = null; paint(); say(res.n ? `${res.n} ${res.n === 1 ? "pilot is" : "pilots are"} in: full access` : "Nobody is waiting"); return;
-  }
-  if (cmd === "approve" || cmd === "revoke") {
-    if (!nick) { tell(`Who? /${cmd} CALLSIGN`); return; }
-    const res = await grantAccess(nick, cmd === "approve");
-    if ("error" in res) { tell(res.error === "not-authorised" ? "Only the founder lets pilots in" : res.error === "no-such-pilot" ? `No pilot called ${nick}` : `Failed: ${res.error}`); return; }
-    inp.value = ""; note = null; paint(); say(cmd === "approve" ? `${res.nick} is in: full access` : `${res.nick} is back to the open galaxy only`); return;
-  }
-  if (cmd === "invite") {
-    const n = Math.max(1, Math.min(1000, parseInt(nick ?? "1", 10) || 1)), res = await makeInvite(n);
-    if ("error" in res) { tell(res.error === "not-authorised" ? "Only the founder makes invites" : `Failed: ${res.error}`); return; }
-    inp.value = ""; await navigator.clipboard.writeText(res.code).catch(() => {});
-    tell(`Invite code ${res.code} · good for ${n} ${n === 1 ? "pilot" : "pilots"} · copied`, "info"); return;
-  }
-  // SYSTEM, the station's voice (the founder's): an announcement, a track, the crew, a welcome
-  if (cmd === "sys" || cmd === "tip" || cmd === "pilots" || cmd === "welcome") {
-    const arg = text.slice(1).trim().slice(cmd.length).trim();
-    let out = "";
-    if (cmd === "sys") { if (!arg) { tell("What should SYSTEM say? /sys TEXT"); return; } out = arg; }
-    else if (cmd === "welcome") { if (!arg) { tell("Who? /welcome CALLSIGN"); return; } out = `◆ NEW PILOT IN THE RANKS: ${arg.toUpperCase()}. WELCOME ABOARD, CLEAR SKIES AND GOOD DIGGING.`; }
-    else if (cmd === "pilots") { const n = await crewCount().catch(() => null); if (n === null) { tell("The registry didn't answer. Try again"); return; } out = `◆ ${n} ${n === 1 ? "PILOT" : "PILOTS"} IN THE RANKS. THE MAP HAS ${galaxy.stars.length} STARS TO DIG.`; }
-    else {
-      // a random track: from the style named, or from anywhere (bigger styles more often)
-      let s = arg ? galaxy.stars.findIndex((x) => x.name.toLowerCase() === arg.toLowerCase()) : -1;
-      if (arg && s < 0) { tell(`No style called ${arg}`); return; }
-      if (s < 0) { const tot = galaxy.stars.reduce((a, x) => a + x.tracks, 0); let r = Math.random() * tot; s = galaxy.stars.findIndex((x) => (r -= x.tracks) < 0); if (s < 0) s = 0; }
-      const ch = await tracks.load(s).catch(() => null); const n = ch ? ch.n0 ?? ch.yt.length : 0;
-      if (!ch || !n) { tell("Couldn't reach that style's tracks. Try again"); return; }
-      const i = Math.floor(Math.random() * n), who = ch.an[ch.a[i]];
-      out = `${`♪ ${ch.t[i]}${who ? ` — ${who}` : ""}`.slice(0, 200)}\n${signalLink(s, i)}`;
-    }
-    const e = await systemSay(out);
-    if (e) { tell(e === "not-authorised" ? "Only the founder speaks as SYSTEM" : e === "missing" ? "SYSTEM can't speak yet: run stardig-system.sql in Supabase" : `Failed: ${e}`); return; }
-    inp.value = ""; note = null; paint(); return;
-  }
-  // a pilot's own look: the same portrait with black hair and a beard (a negative avatar number), or back
-  if (cmd === "avatar") {
-    const me = pilot.me!, want = (nick ?? "").toLowerCase(), cur = me.avatar || 1;
-    if (want !== "beard" && want !== "back") { tell("/avatar beard: black hair and a beard · /avatar back: as it was", "info"); return; }
-    const e = await newPortrait(want === "beard" ? -Math.abs(cur) : Math.abs(cur));
-    if (e) { tell(`Failed: ${e}`); return; }
-    inp.value = ""; note = null; paint(); say(want === "beard" ? "New look: black hair and a beard" : "Your portrait is as it was"); return;
-  }
-  if (cmd !== "rank" || !nick || !rest.length) { tell("Unknown command. Try /ranks"); return; }
-  const r = rankKey(rest.join(" ")); if (!r) { tell(`No such rank. ${Object.keys(RANKS).join(" · ")}`); return; }
-  if (r === "founder") { tell("ARCHITECT is yours alone: it's not given to anyone"); return; }
-  const res = await grantRank(nick, r);
-  if ("error" in res) { tell(res.error === "not-authorised" ? "Only the founder gives ranks" : res.error === "no-such-pilot" ? `No pilot called ${nick} (or it's you)` : `Failed: ${res.error}`); return; }
-  inp.value = ""; note = null; paint(); say(`${res.nick} is now ${RANKS[r].label}`);
 }
 
 async function act(e: Event) {
@@ -278,7 +189,7 @@ async function act(e: Event) {
   if (rp) { replyTo = +rp.dataset.reply!; paint(); $<HTMLInputElement>("commsIn").focus(); return; }
   if (t.closest("[data-unreply]")) { replyTo = null; paint(); return; }
   const go = t.closest<HTMLElement>("[data-goto]");
-  if (go) { const el = document.querySelector<HTMLElement>(`#commsList [data-mid="${go.dataset.goto}"]`); el?.scrollIntoView({ block: "center", behavior: "smooth" }); el?.classList.add("flash"); setTimeout(() => el?.classList.remove("flash"), 1200); return; }
+  if (go) { goToMessage(go.dataset.goto!); return; }
   const sg = t.closest<HTMLElement>("[data-sigh]");
   if (sg) {
     const [yt, ...rest] = sg.dataset.sigh!.split("."), r = await find({ yt, star: rest.join(".") });
