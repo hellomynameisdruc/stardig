@@ -2,12 +2,14 @@
 the founder's /tip). Run by .github/workflows/tip.yml twice a day.
 
 Reads the published map from the site and writes to Supabase with the service key, which only lives in
-the repository's secrets (SUPABASE_SERVICE_KEY). Bigger styles come up more often, like /tip.
+the repository's secrets (SUPABASE_SERVICE_KEY): Supabase → Project Settings → API Keys → a secret key
+(sb_secret_…), or the legacy service_role key. Bigger styles come up more often, like /tip.
 """
 import json
 import os
 import random
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -39,11 +41,23 @@ def pick(rng: random.Random):
     return said[:200], link, star
 
 
+def headers():
+    """a new secret key (sb_secret_…) goes in the apikey header alone; a legacy service_role key (a JWT)
+    goes there and as the bearer too"""
+    h = {"apikey": KEY, "Content-Type": "application/json", "Prefer": "return=minimal"}
+    if KEY.startswith("eyJ"):
+        h["Authorization"] = f"Bearer {KEY}"
+    return h
+
+
 def post(body: str):
     req = urllib.request.Request(f"{SB}/rest/v1/messages", method="POST", data=json.dumps({"room": "all", "body": body, "pilot": None}).encode(),
-                                 headers={"apikey": KEY, "Authorization": f"Bearer {KEY}", "Content-Type": "application/json", "Prefer": "return=minimal"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return r.status
+                                 headers=headers())
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return r.status
+    except urllib.error.HTTPError as e:
+        sys.exit(f"Supabase said {e.code}: {e.read().decode()[:300]}")
 
 
 if __name__ == "__main__":

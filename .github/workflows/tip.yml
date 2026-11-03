@@ -1,6 +1,7 @@
 # SYSTEM's tip: every 12 hours (10:17 and 22:17 Kyiv time in winter, an hour later in summer) the
 # station posts a random track from the map to COMMS · ALL, like the founder's /tip.
-# Needs the repository secret SUPABASE_SERVICE_KEY (Supabase → Project Settings → API → service_role).
+# Needs the repository secret SUPABASE_SERVICE_KEY: Supabase → Project Settings → API Keys → a secret key
+# (sb_secret_…), or the legacy service_role key.
 # "Run workflow" on the Actions tab posts one right away.
 name: SYSTEM tip
 
