@@ -5,17 +5,22 @@ import { galaxy, state } from "../app/state";
 import { select } from "../app/actions";
 import { cloudWanted } from "../cloud/client";
 import { provide, ui } from "../app/ports";
-import { onPilot, pilot, waitingPilots, watchPilots } from "../cloud/pilots";
+import { approveAll, onPilot, pilot, waitingPilots, watchMe, watchPilots } from "../cloud/pilots";
 import { showWaiting } from "./comms";
 import { openPilot } from "./pilot";
 import { clearMode, say, setMode } from "./rail";
 
+let waited = false;
 function paint() {
   const me = pilot.me, was = beta.open;
   beta.open = !!(me && (me.access || me.admin));
   if (beta.open || !beta.on) clearMode("beta");
   else setMode("beta", `<b>CLOSED BETA</b> · THE ${openName().toUpperCase()} STAR IS OPEN TO ALL${me ? " · WAITING FOR ACCESS" : ""}`, [{ label: me ? "ENTER INVITE" : "GET ACCESS", run: () => openPilot() }]);
   if (was !== beta.open) ui.showSelection(0); // the dossier's keys open up (or lock)
+  if (!was && beta.open && me && waited) say("Access granted: the whole map is open. Welcome aboard, pilot", "ok");
+  waited = !!me && !beta.open;
+  // waiting for access: the moment the founder lets this pilot in, the page opens up (no reload)
+  if (me && !beta.open) watchMe().catch(() => {});
 }
 
 /** the selected object's star, for the dossier */
@@ -47,7 +52,7 @@ async function founder() {
 }
 function paintWaiting() {
   if (!waiting.size) { clearMode("waiting"); return; }
-  setMode("waiting", `<b>${waiting.size}</b> ${waiting.size === 1 ? "PILOT WAITS" : "PILOTS WAIT"} FOR ACCESS`, [{ label: "LIST", run: () => { showWaiting(); } }]);
+  setMode("waiting", `<b>${waiting.size}</b> ${waiting.size === 1 ? "PILOT WAITS" : "PILOTS WAIT"} FOR ACCESS`, [{ label: "LIST", run: () => { showWaiting(); } }, { label: "LET ALL IN", run: async () => { const r = await approveAll(); if ("error" in r) say(r.error === "missing" ? "Run stardig-system.sql in Supabase first" : `Failed: ${r.error}`, "err"); } }]);
 }
 
 /** without access, the visit starts at the open star, so it's plain what can be played */

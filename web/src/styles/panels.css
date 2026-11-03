@@ -167,3 +167,13 @@ button.ytlist:disabled { cursor: default; opacity: .8; animation: flicker 2s inf
 .msg.sys .ava { color: var(--red); filter: drop-shadow(0 0 3px rgb(255 77 109 / .5)) }
 .msg.sys .sys-n { color: var(--red); letter-spacing: .12em }
 .msg.sys .m-t { color: #ffd6dc }
+/* the founder's console: who waits for access */
+.wait-bar { flex: none; margin: 0 0 8px; padding: 6px 8px; border: 1px solid var(--ink); background: var(--wash); box-shadow: var(--glow); font-size: var(--fs-s) }
+.wait-bar .wb-h { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-family: var(--f-dot); letter-spacing: .1em }
+.wait-bar .wb-h b { flex: 1; font-weight: normal }
+.wait-bar .wb-r { display: flex; align-items: center; gap: 10px; padding: 3px 0; border-top: 1px dashed var(--line) }
+.wait-bar .wb-r span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--ink) }
+.wait-bar time { color: var(--dim); font-size: var(--fs-xs) }
+/* the console on a phone: the header keeps the pilot and the MAP key in view */
+@media (max-width: 600px) { .chat-page .brand .sub { display: none } }
+.chat-panel .tabs { gap: 14px }

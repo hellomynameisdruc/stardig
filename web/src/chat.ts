@@ -16,7 +16,7 @@ import { browserKV } from "./store/storage";
 import { Prefs } from "./store/prefs";
 import { applyCursors } from "./ui/cursors";
 import { ALL, goLive, loadRoom, messages, onComms, remove, report, toggleReaction, transmit, type Msg } from "./cloud/comms";
-import { lookup, onPilot, pilot, roster, wake, watchPilots } from "./cloud/pilots";
+import { approveAll, grantAccess, lookup, onPilot, pilot, roster, wake, waitingPilots, watchPilots } from "./cloud/pilots";
 import { cloud } from "./cloud/client";
 import { avatarSvg, systemAvatarSvg } from "./ui/avatar";
 import { isStaff, rankOf } from "./ui/ranks";
@@ -160,6 +160,28 @@ async function click(e: Event) {
 $("commsList").addEventListener("click", click);
 document.querySelectorAll<HTMLElement>("[data-ch]").forEach((b) => { b.onclick = () => { view = b.dataset.ch as "all" | "air"; note = null; paint(); if (view === "all") $("commsList").scrollTop = 1e9; }; });
 
+// —— who waits for access: a bar over the channel, each pilot with a LET IN key (and LET ALL IN)
+let waitList: { nick: string; created_at: string }[] = [];
+const ago = (t: string) => { const m = Math.round((Date.now() - Date.parse(t)) / 60000); return m < 60 ? `${m}m` : m < 2880 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`; };
+async function refreshWaiting() { waitList = (await waitingPilots()) ?? []; paintWaiting(); }
+function paintWaiting() {
+  let bar = document.getElementById("waitBar");
+  if (!bar) {
+    bar = document.createElement("div"); bar.id = "waitBar"; bar.className = "wait-bar"; $("commsList").before(bar);
+    bar.addEventListener("click", async (e) => {
+      const t = e.target as HTMLElement, one = t.closest<HTMLElement>("[data-let]");
+      if (one) { one.textContent = "…"; const r = await grantAccess(one.dataset.let!, true); if ("error" in r) tell(`Failed: ${r.error}`); else say(`${r.nick} is in: full access`); refreshWaiting(); return; }
+      if (t.closest("[data-letall]")) { const r = await approveAll(); if ("error" in r) tell(r.error === "missing" ? "Run stardig-system.sql in Supabase first" : `Failed: ${r.error}`); else say(`${r.n} ${r.n === 1 ? "pilot is" : "pilots are"} in`); refreshWaiting(); }
+    });
+  }
+  const n = waitList.length;
+  document.title = n ? `(${n}) COMMS · stardig` : "COMMS · stardig";
+  bar.hidden = locked || !n;
+  if (!n) { bar.innerHTML = ""; return; }
+  bar.innerHTML = `<div class="wb-h"><b>◆ ${n} ${n === 1 ? "PILOT WAITS" : "PILOTS WAIT"} FOR ACCESS</b>${n > 1 ? `<button type="button" class="key sm hot" data-letall>LET ALL IN</button>` : ""}</div>` +
+    waitList.map((p) => `<div class="wb-r"><span>${esc(p.nick.toUpperCase())}</span><time>waiting ${ago(p.created_at)}</time><button type="button" class="key sm" data-let="${esc(p.nick)}">LET IN</button></div>`).join("");
+}
+
 // —— start
 initRail();
 onComms(() => paint());
@@ -173,7 +195,9 @@ async function boot() {
   goLive((r) => r === ALL);
   paint(); $("commsList").scrollTop = 1e9;
   // word as soon as someone signs up or gets in
-  watchPilots((kind, nick) => say(kind === "new" ? `New pilot: ${nick} signed up and waits for access (/waiting)` : `${nick} is in`, "info")).catch(() => {});
+  refreshWaiting();
+  watchPilots((kind, nick) => { say(kind === "new" ? `New pilot: ${nick} signed up and waits for access` : `${nick} is in`, "info"); refreshWaiting(); }).catch(() => {});
+  setInterval(refreshWaiting, 60_000); // the "waiting for" times move on, and nothing is missed
   const sb = await cloud(), air: RealtimeChannel = sb.channel("onair", { config: { private: true } });
   air.on("presence", { event: "sync" }, async () => {
     const seen = new Set<string>();

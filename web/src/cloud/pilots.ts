@@ -131,6 +131,22 @@ export async function watchPilots(fn: (kind: "new" | "in", nick: string) => void
     .subscribe();
 }
 
+/** this pilot's own record, live: let in (or ranked) while the page is open, the page knows at once */
+let mine: { unsubscribe: () => unknown } | null = null, mineId = "";
+export async function watchMe() {
+  const me = pilot.me; if (!me || mineId === me.id) return;
+  mine?.unsubscribe(); mineId = me.id;
+  const sb = await cloud();
+  mine = sb.channel(`pilot:${me.id}`)
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "pilots", filter: `id=eq.${me.id}` }, (e) => {
+      const p = e.new as Pilot, cur = pilot.me; if (!cur || cur.id !== p.id) return;
+      const changed = cur.access !== p.access || cur.rank !== p.rank;
+      cur.access = p.access; cur.rank = p.rank;
+      if (changed) pilotChanged();
+    })
+    .subscribe();
+}
+
 export async function signOut() {
   await (await cloud()).auth.signOut();
   pilot.session = null; pilot.me = null; pilotChanged();
