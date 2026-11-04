@@ -1,13 +1,11 @@
-# SYSTEM's tip: every 12 hours (10:17 and 22:17 Kyiv time in winter, an hour later in summer) the
-# station posts a random track from the map to COMMS · ALL, like the founder's /tip.
+# SYSTEM's tip on demand: "Run workflow" posts a random track from the map to COMMS · ALL, like /tip.
+# The twice-a-day tips come from the database's own clock (supabase/tips-cron.sql): GitHub's schedule
+# ran hours late and skipped runs.
 # Needs the repository secret SUPABASE_SERVICE_KEY: Supabase → Project Settings → API Keys → a secret key
 # (sb_secret_…), or the legacy service_role key.
-# "Run workflow" on the Actions tab posts one right away.
 name: SYSTEM tip
 
 on:
-  schedule:
-    - cron: "17 8,20 * * *"
   workflow_dispatch:
 
 permissions:
