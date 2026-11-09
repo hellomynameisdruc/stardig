@@ -9,6 +9,9 @@ WEB_DATA_DIR = ROOT / "web" / "public" / "data"  # те, що читає сай�
 
 # Releases a style needs to become a star
 MIN_STYLE_RELEASES = 900
+# ...but a galaxy's own style (listed in sectors.json) needs only this many: the niche styles
+# (New Beat, Schranz, Footwork, Witch House…) get small stars of their own
+MIN_CORE_RELEASES = 150
 # ...and a style that is not one of the galaxies' own (rock, pop, jazz riding along on their releases)
 MIN_NEIGHBOUR_RELEASES = 2500
 # Скільки релізів має бути в лейбла, щоб він став планетою (менші йдуть у пояс астероїдів)

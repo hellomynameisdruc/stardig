@@ -21,6 +21,22 @@ def keep_genres(path=SECTORS_FILE):
     return json.loads(Path(path).read_text(encoding="utf-8")).get("keep_genres", [])
 
 
+def load_combos(path=SECTORS_FILE):
+    """styles Discogs has no tag for, made from tags that come together (sectors.json "combos")"""
+    return json.loads(Path(path).read_text(encoding="utf-8")).get("combos", [])
+
+
+def add_combos(rel, combos):
+    """tag each release with the combo styles it qualifies for: all of `all`, and one of `any`"""
+    for r in rel:
+        st = set(r["styles"])
+        for c in combos:
+            if c["style"] not in st and set(c["all"]) <= st and st & set(c.get("any") or st):
+                r["styles"] = sorted(st | {c["style"]})
+                st = set(r["styles"])
+    return rel
+
+
 def in_sector(rec, sector):
     return bool(set(rec.get("genres", ())) & set(sector["genres"])) and bool(set(rec["styles"]) & set(sector["styles"]))
 

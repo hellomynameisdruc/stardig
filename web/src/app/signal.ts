@@ -30,8 +30,11 @@ function queued() {
   const turn = line.then(() => new Promise<void>((r) => setTimeout(r, 350)));
   line = turn; return turn;
 }
-export function find(sig: Signal) {
-  const key = `${sig.yt}.${sig.star}`;
+/** where a signal is. `wide`: if it isn't in its style any more (the map was rebuilt and the track
+ *  moved to a new, narrower style), look in the styles closest to it too — for a link someone opened,
+ *  not for the many cards in COMMS (that would load a lot) */
+export function find(sig: Signal, wide = false) {
+  const key = `${sig.yt}.${sig.star}${wide ? ".w" : ""}`;
   if (found.has(key)) return Promise.resolve(found.get(key)!);
   let p = pending.get(key);
   if (!p) {
@@ -39,7 +42,12 @@ export function find(sig: Signal) {
       const s = galaxy.starIndex(sig.star); if (s < 0) return null;
       if (!chunk(s)) await queued(); // stars not loaded yet come in one at a time, not all at once
       const i = await locateYt(s, sig.yt).catch(() => -1); // the vault too
-      return i >= 0 ? { s, i } : null;
+      if (i >= 0) return { s, i };
+      if (wide) for (const { s: s2 } of [...galaxy.adj[s]].sort((a, b) => b.w - a.w).slice(0, 6)) {
+        const j = await locateYt(s2, sig.yt).catch(() => -1);
+        if (j >= 0) return { s: s2, i: j };
+      }
+      return null;
     })().then((r) => { found.set(key, r); pending.delete(key); return r; });
     pending.set(key, p);
   }

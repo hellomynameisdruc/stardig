@@ -192,7 +192,7 @@ async function act(e: Event) {
   if (go) { goToMessage(go.dataset.goto!); return; }
   const sg = t.closest<HTMLElement>("[data-sigh]");
   if (sg) {
-    const [yt, ...rest] = sg.dataset.sigh!.split("."), r = await find({ yt, star: rest.join(".") });
+    const [yt, ...rest] = sg.dataset.sigh!.split("."), r = await find({ yt, star: rest.join(".") }, true);
     if (r) select({ kind: "track", ...r }, true, true); else flashKey(sg, "NOT ON THE MAP");
     return;
   }

@@ -29,7 +29,7 @@ from build_titles import build as build_titles
 import numpy as np
 
 import config as C
-from catalog import full_catalogue, load_sectors
+from catalog import add_combos, full_catalogue, load_combos, load_sectors
 
 GOLDEN = math.pi * (3 - math.sqrt(5))
 HULL_N = 48
@@ -49,14 +49,16 @@ def load(path):
 
 
 # ---------- styles ----------
-def style_counts(rel, min_style, core=None, min_neighbour=0):
+def style_counts(rel, min_style, core=None, min_neighbour=0, min_core=None):
     """Releases per style, and the styles big enough to become stars (most common first).
     With `core` (the galaxies' own styles), any other style that rides along on their releases
-    (rock, pop, jazz…) needs `min_neighbour` releases, so the map stays electronic at heart."""
+    (rock, pop, jazz…) needs `min_neighbour` releases, so the map stays electronic at heart; a core
+    style needs only `min_core` (when it's smaller than min_style), so niche styles get a star."""
     # dict.fromkeys de-duplicates in a fixed order (a set's order changes between runs)
     style_n = Counter(s for r in rel for s in dict.fromkeys(r["styles"]))
+    low = min(min_style, min_core) if min_core else min_style
     stars = [s for s, n in style_n.most_common()
-             if n >= min_style and (core is None or s in core or n >= min_neighbour)]
+             if (core is None and n >= min_style) or (core is not None and (n >= min_neighbour if s not in core else n >= low))]
     return style_n, stars
 
 
@@ -310,6 +312,31 @@ def layout_galaxies(stars, radius, weight, gal, gids, iters=900):
         c = pos[idx].mean(0)
         out[g] = (float(c[0]), float(c[1]), float(max(np.linalg.norm(pos[idx] - c, axis=1) + radius[idx])))
     return pos, out
+
+
+def align(pos, centres, anchors):
+    """Turn (or flip) the whole map so each galaxy points the way `anchors` says (degrees from the
+    map's middle; the previous map's) — a rebuild keeps galaxies where pilots know them. In place."""
+    if not anchors or not all(g in anchors for g in centres):
+        return pos, centres
+    mid = np.mean([[c[0], c[1]] for c in centres.values()], axis=0)
+    ang = {g: math.atan2(c[1] - mid[1], c[0] - mid[0]) for g, c in centres.items()}
+    best = None
+    for flip in (1, -1):
+        for k in range(360):
+            th = math.radians(k)
+            cost = sum(1 - math.cos(flip * a + th - math.radians(anchors[g])) for g, a in ang.items())
+            if best is None or cost < best[0] - 1e-12:
+                best = (cost, flip, th)
+    _, flip, th = best
+    c, s = math.cos(th), math.sin(th)
+
+    def tr(x, y):
+        dx, dy = x - mid[0], flip * (y - mid[1])
+        return mid[0] + c * dx - s * dy, mid[1] + s * dx + c * dy
+    for i in range(len(pos)):
+        pos[i] = tr(*pos[i])
+    return pos, {g: (*tr(v[0], v[1]), v[2]) for g, v in centres.items()}
 
 
 def separate(pos, r, gap=40, rounds=300):
@@ -603,7 +630,7 @@ def write_outputs(out_dir, map_json, chunks, artists, vaults=(), vault_artists=N
 
 
 # ---------- the whole build ----------
-def star_hues(stars, pos, gal, centres):
+def star_hues(stars, pos, gal, centres, pinned=None):
     """Star colours: with one galaxy, the colour wheel goes round the map; with several, each galaxy
     gets its own hue (by where it sits) and its stars vary a little around it."""
     if len(centres) == 1:
@@ -617,6 +644,8 @@ def star_hues(stars, pos, gal, centres):
     order = sorted(centres, key=lambda g: ang[g])
     step = 1 / len(order)
     ghue = {g: 0.08 + ang[order[0]] / (2 * math.pi) + k * step for k, g in enumerate(order)}
+    if pinned and all(g in pinned for g in centres):
+        ghue = {g: pinned[g] for g in centres}  # colours fixed in sectors.json: a rebuild keeps them
     out = []
     for s, (x, y) in zip(stars, pos, strict=True):
         cx, cy, _ = centres[gal[s]]
@@ -630,7 +659,7 @@ def build(rel, min_style, min_label, sample=False, sectors=None):
     galaxies by sector (see star_galaxies)."""
     sectors = sectors or []
     core = {st for sec in sectors for st in sec["styles"]} if sectors else None
-    style_n, stars = style_counts(rel, min_style, core, max(min_style, C.MIN_NEIGHBOUR_RELEASES))
+    style_n, stars = style_counts(rel, min_style, core, max(min_style, C.MIN_NEIGHBOUR_RELEASES), C.MIN_CORE_RELEASES)
     weight = style_links(rel, stars, style_n)
     y0, y1, year_hist = year_histograms(rel, stars)
     gal, gids = star_galaxies(rel, stars, sectors)
@@ -651,7 +680,8 @@ def build(rel, min_style, min_label, sample=False, sectors=None):
 
     # final star layout with the real system sizes
     pos, centres = layout_galaxies(stars, np.array([systems[s]["radius"] for s in stars]), weight, gal, gids, iters=400)
-    hues = star_hues(stars, pos, gal, centres)
+    pos, centres = align(pos, centres, {sec["id"]: sec["at"] for sec in sectors if "at" in sec})
+    hues = star_hues(stars, pos, gal, centres, {sec["id"]: sec["hue"] for sec in sectors if "hue" in sec})
     ghue = None
     if isinstance(hues, tuple):
         hues, ghue = hues
@@ -680,13 +710,13 @@ def build(rel, min_style, min_label, sample=False, sectors=None):
 
 def main(src, out_dir, min_style, min_label, sample, only):
     sectors = [s for s in load_sectors() if not only or s["id"] in only]
-    rel = full_catalogue(src, sectors)
+    rel = add_combos(full_catalogue(src, sectors), load_combos())
     print(f"Catalogue: {len(rel):,} releases in {len(sectors)} sectors")
     map_json, chunks, artists, vaults, vault_artists = build(rel, min_style, min_label, sample, sectors)
     write_outputs(out_dir, map_json, chunks, artists, vaults, vault_artists)
     print(f"Title search: {build_titles(out_dir)}")
     gal = ", ".join(f"{g['name']} {g['stars']}" for g in map_json["galaxies"])
-    print(f"Map ready: {len(map_json['stars'])} stars (≥ {min_style} releases) in galaxies [{gal}], "
+    print(f"Map ready: {len(map_json['stars'])} stars (≥ {min_style} releases, a galaxy's own style ≥ {min(min_style, C.MIN_CORE_RELEASES)}) in galaxies [{gal}], "
           f"{len(map_json['planets']):,} planets, {map_json['meta']['tracks']:,} tracks on the map + {map_json['meta']['vault']:,} in the vault → {out_dir}")
 
 

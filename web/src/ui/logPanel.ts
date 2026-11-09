@@ -7,17 +7,26 @@ import { openListPicker } from "./listPicker";
 import { saveToYouTube, youtubeReady } from "../cloud/youtube";
 import { select } from "../app/actions";
 import { locateYt } from "../app/vault";
+import { starsWithTitle } from "../data/titles";
 import { openComms } from "./comms";
 
 /** a saved entry's place on the current map: by YouTube id within its star (found by name), or by its
  * saved numbers if the map hasn't been rebuilt since; null if it can't be found */
-async function locate(e: { s: number; i: number; b?: string; y?: string; st?: string }): Promise<{ s: number; i: number } | null> {
+async function locate(e: { s: number; i: number; b?: string; y?: string; st?: string; title?: string }): Promise<{ s: number; i: number } | null> {
   const { stars, meta } = galaxy;
   if (e.y) {
     const byName = galaxy.starIndex(e.st), s = byName >= 0 ? byName : e.s;
-    if (s >= stars.length) return null;
-    const i = await locateYt(s, e.y, e.i).catch(() => -1); // the vault too
-    return i >= 0 ? { s, i } : null;
+    if (s < stars.length) {
+      const i = await locateYt(s, e.y, e.i).catch(() => -1); // the vault too
+      if (i >= 0) return { s, i };
+    }
+    // the map was rebuilt and the track moved to another style (a new, narrower star): its title says where
+    if (e.title) for (const s2 of await starsWithTitle(e.title).catch(() => [] as number[])) {
+      if (s2 === s) continue;
+      const i = await locateYt(s2, e.y).catch(() => -1);
+      if (i >= 0) return { s: s2, i };
+    }
+    return null;
   }
   if (e.b !== meta.build || e.s >= stars.length) return null; // numbers from another build of the map
   const ch = await tracks.load(e.s).catch(() => null);
@@ -103,7 +112,7 @@ function drawBeacons() {
 }
 
 /** fly to a saved track and play it (found now: by id in its star, or from the vault) */
-async function go(e: { s: number; i: number; b?: string; y?: string; st?: string }, key: HTMLElement) {
+async function go(e: { s: number; i: number; b?: string; y?: string; st?: string; title?: string }, key: HTMLElement) {
   key.classList.add("busy");
   const r = await locate(e); key.classList.remove("busy");
   if (r) select({ kind: "track", ...r }, true, true); else { key.setAttribute("disabled", ""); key.title = "Not on the map any more"; }
@@ -141,7 +150,7 @@ function initGrip() {
 
 export function initLogPanel() {
   initGrip();
-  $("log").addEventListener("click", (e) => { const b = (e.target as HTMLElement).closest<HTMLElement>("[data-log]"); const r = b && logRefs[+b.dataset.log!]; if (r) go(r, b!); });
+  $("log").addEventListener("click", (e) => { const b = (e.target as HTMLElement).closest<HTMLElement>("[data-log]"); const r = b && logRefs[+b.dataset.log!]; if (r) go({ ...r, title: r.ti }, b!); });
   $("liked").addEventListener("click", (e) => {
     const t = e.target as HTMLElement, cur = beacons.current;
     const c = t.closest<HTMLElement>("[data-bl]"); if (c) { edit = ""; saveMsg = ""; beacons.setCurrent(c.dataset.bl!); return; }
@@ -154,7 +163,7 @@ export function initLogPanel() {
     const u = t.closest<HTMLElement>("[data-y]");
     if (u) { const it = shown.find((b) => b.y === u.dataset.y); if (cur) { if (it) beacons.toggleIn(cur, it); } else beacons.remove(u.dataset.y!); return; }
     const b = (e.target as HTMLElement).closest<HTMLElement>("[data-bk]"), bk = b && beacons.all[+b.dataset.bk!];
-    if (bk) go({ s: bk.s, i: bk.i, y: bk.y, st: bk.st }, b!);
+    if (bk) go({ s: bk.s, i: bk.i, y: bk.y, st: bk.st, title: bk.t }, b!);
   });
   $("liked").addEventListener("submit", (e) => {
     e.preventDefault();

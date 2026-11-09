@@ -5,6 +5,7 @@ import { $ } from "../core/dom";
 import { galaxy, tracks } from "../app/state";
 import { dataUrl, loadArtists } from "../data/loader";
 import { adopt } from "../app/vault";
+import { normT, titleKey, titleShelf } from "../data/titles";
 import { flyToNebula, select } from "../app/actions";
 
 type Hit = { label: string; kind: string; color?: string; go: () => void };
@@ -21,31 +22,7 @@ function vaultShelf(c: string, then: () => void) {
   return null;
 }
 
-// —— track titles
-const normT = (s: string) => s.toLowerCase().normalize("NFKD").replace(/\p{M}/gu, "").replace(/[^0-9a-z]+/g, "");
-type Shelf = { t: string[]; n: string[]; a: number[]; s: number[]; i: number[]; norm: string[] };
-let split: Set<string> | null | undefined; // keys split into longer ones (undefined: not asked yet)
-const shelves = new Map<string, Shelf | null>();
-function titleShelf(key: string, then: () => void): Shelf | null {
-  if (shelves.has(key)) return shelves.get(key) ?? null;
-  shelves.set(key, null);
-  fetch(dataUrl(`search/${key}.json`)).then((r) => (r.ok ? r.json() : null)).then((w) => {
-    if (!w) return;
-    const t = (w.t as string).split("\n");
-    shelves.set(key, { t, n: (w.n as string).split("\n"), a: w.a, s: w.s, i: w.i, norm: t.map(normT) }); then();
-  }).catch(() => shelves.delete(key));
-  return null;
-}
-/** which file holds titles starting with the query; "" while more letters are needed; null: none to look in */
-function titleKey(s: string, then: () => void): string | null {
-  if (split === undefined) { split = null; fetch(dataUrl("search/index.json")).then((r) => (r.ok ? r.json() : { split: [] })).then((w) => { split = new Set(w.split); then(); }).catch(() => { split = undefined; }); }
-  if (!split) return null;
-  const n = normT(s);
-  if (n.length < 2) return /[\p{L}\p{N}]{2}/u.test(s) ? "_" : null; // other scripts: one file, matched as typed
-  let k = n.slice(0, 2);
-  while (split.has(k)) { if (n.length <= k.length) return ""; k = n.slice(0, k.length + 1); }
-  return k;
-}
+// —— track titles (data/titles.ts)
 function trackHits(s: string, room: number, then: () => void): Hit[] {
   const key = titleKey(s, then); if (key === null) return [];
   if (key === "") return [{ label: "keep typing to find tracks by title…", kind: "TRACK", go: () => undefined }];

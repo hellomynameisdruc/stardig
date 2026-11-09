@@ -23,7 +23,7 @@
 
 | Galaxies | Stars | Planets | Satellites | In the vault | Releases | Years |
 |:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| **13** | **128** | **20,488** | **2,115,206** | **+1,819,596** | **1,143,694** | **1980–2026** |
+| **13** | **174** | **21,046** | **2,169,510** | **+1,786,587** | **1,151,437** | **1980–2026** |
 | genres | styles | labels | tracks on the map | more, all playable | from Discogs | of music |
 
 House · Techno · Disco · Trance · Drum n Bass · Ambient · Downtempo · Experimental · Electro · Synth & Wave · UK Bass · Hardcore · Eurodance

@@ -78,7 +78,7 @@ if (typeof BroadcastChannel === "function") {
   bus.onmessage = (e) => {
     const go = String(e.data?.go ?? "");
     const s = parseSignal(go), f = go.match(/^#fleet-([\w-]{6,64})$/);
-    if (s) find(s).then((r) => { if (r) select({ kind: "track", ...r }, true, true); });
+    if (s) find(s, true).then((r) => { if (r) select({ kind: "track", ...r }, true, true); });
     else if (f) tuneIn(f[1]);
     else return;
     bus.postMessage({ ack: go });
@@ -86,11 +86,11 @@ if (typeof BroadcastChannel === "function") {
 }
 addEventListener("hashchange", () => {
   if (routeFromHash()) return;
-  const s = parseSignal(location.hash); if (s) find(s).then((r) => { if (r) select({ kind: "track", ...r }); });
+  const s = parseSignal(location.hash); if (s) find(s, true).then((r) => { if (r) select({ kind: "track", ...r }); });
   const f = location.hash.match(/^#fleet-([\w-]{6,64})$/); if (f) tuneIn(f[1]);
 });
 const sig = parseSignal(location.hash);
-if (sig) find(sig).then((r) => { if (r) select({ kind: "track", ...r }); });
+if (sig) find(sig, true).then((r) => { if (r) select({ kind: "track", ...r }); });
 const m = location.hash.match(/^#t(\d+)-(\d+)$/);
 if (m && +m[1] < galaxy.stars.length) tracks.load(+m[1]).then((ch) => { if (+m[2] < ch.yt.length) select({ kind: "track", s: +m[1], i: +m[2] }); });
 

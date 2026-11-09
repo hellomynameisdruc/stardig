@@ -268,3 +268,24 @@ def test_neighbour_styles_need_more_releases():
     assert stars == ["House", "Juke"]
     _, stars = B.style_counts(rel, 2)
     assert set(stars) == {"House", "Pop Rock", "Juke"}
+
+
+def test_combos_tag_releases_with_styles_discogs_lacks():
+    rel = [{"styles": ["Acid", "Trance"]}, {"styles": ["Acid"]}, {"styles": ["Hard Trance", "Acid"]}]
+    K.add_combos(rel, [{"style": "Acid Trance", "all": ["Acid"], "any": ["Trance", "Hard Trance"]}])
+    assert [("Acid Trance" in r["styles"]) for r in rel] == [True, False, True]
+
+
+def test_a_galaxys_own_niche_style_gets_a_star(monkeypatch):
+    monkeypatch.setattr(B.C, "MIN_CORE_RELEASES", 5)
+    rel = [{"styles": ["House"]}] * 50 + [{"styles": ["Schranz"]}] * 6 + [{"styles": ["Rock"]}] * 6
+    _, stars = B.style_counts(rel, 20, {"House", "Schranz"}, 20, B.C.MIN_CORE_RELEASES)
+    assert stars == ["House", "Schranz"]  # the neighbour Rock is still too small
+
+
+def test_a_rebuilt_map_is_turned_to_keep_galaxies_in_place():
+    import numpy as np
+    centres = {"a": (10.0, 0.0, 1.0), "b": (-10.0, 0.0, 1.0), "c": (0.0, 10.0, 1.0), "d": (0.0, -10.0, 1.0)}
+    pos = np.array([[10.0, 0.0], [-10.0, 0.0]])
+    pos, out = B.align(pos, centres, {"a": 180, "b": 0, "c": -90, "d": 90})  # turned half round
+    assert abs(out["a"][0] + 10) < 0.2 and abs(out["c"][1] + 10) < 0.2 and abs(pos[0][0] + 10) < 0.2

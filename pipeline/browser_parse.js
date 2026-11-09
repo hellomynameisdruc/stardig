@@ -13,19 +13,19 @@
 //   kosmos.save()                                               // download sectors.jsonl.gz
 (() => {
   /*SECTORS*/const SECTORS = [
-    { id: "house", genres: ["Electronic"], styles: ["House", "Deep House", "Tech House", "Acid House", "Garage House", "Progressive House", "Hard House", "Ghetto House", "Hip-House", "Italo House", "Electro House", "Latin House", "Afro House", "Jackin House", "Funky House", "Tribal House"] },
-    { id: "techno", genres: ["Electronic"], styles: ["Techno", "Minimal", "Minimal Techno", "Dub Techno", "Deep Techno", "Hard Techno", "Schranz", "Acid", "Bleep", "Tribal"] },
+    { id: "house", genres: ["Electronic"], styles: ["House", "Deep House", "Tech House", "Acid House", "Garage House", "Progressive House", "Hard House", "Ghetto House", "Hip-House", "Italo House", "Electro House", "Latin House", "Afro House", "Jackin House", "Funky House", "Tribal House", "Future House", "Tropical House", "French House", "Ambient House", "Microhouse", "Beatdown", "Ghetto", "Kwaito", "Gqom", "Amapiano"] },
+    { id: "techno", genres: ["Electronic"], styles: ["Techno", "Minimal", "Minimal Techno", "Dub Techno", "Deep Techno", "Hard Techno", "Schranz", "Acid", "Bleep", "Tribal", "Hard Beat", "Hyper Techno", "Bouncy Techno"] },
     { id: "disco", genres: ["Electronic", "Funk / Soul"], styles: ["Disco", "Nu-Disco", "Italo-Disco", "Euro-Disco", "Hi NRG", "Boogie"] },
-    { id: "trance", genres: ["Electronic"], styles: ["Trance", "Progressive Trance", "Psy-Trance", "Goa Trance", "Hard Trance", "Tech Trance"] },
+    { id: "trance", genres: ["Electronic"], styles: ["Trance", "Progressive Trance", "Psy-Trance", "Goa Trance", "Hard Trance", "Tech Trance", "Neo Trance", "Euro Trance", "Acid Trance"] },
     { id: "dnb", genres: ["Electronic"], styles: ["Drum n Bass", "Jungle", "Breakbeat", "Breaks", "Progressive Breaks", "Big Beat", "Breakcore", "Halftime"] },
     { id: "ambient", genres: ["Electronic"], styles: ["Ambient", "Dark Ambient", "Drone", "New Age", "Berlin-School", "Field Recording"] },
-    { id: "downtempo", genres: ["Electronic"], styles: ["Downtempo", "Trip Hop", "Future Jazz", "Acid Jazz", "Balearic", "Chillwave", "Dub", "Illbient"] },
-    { id: "experimental", genres: ["Electronic"], styles: ["IDM", "Glitch", "Experimental", "Abstract", "Noise", "Industrial", "Rhythmic Noise", "Leftfield"] },
-    { id: "electro", genres: ["Electronic"], styles: ["Electro", "Electroclash", "Miami Bass", "Freestyle", "Ghettotech", "Bass Music"] },
-    { id: "wave", genres: ["Electronic"], styles: ["Synth-pop", "New Wave", "Darkwave", "EBM", "Synthwave", "Coldwave", "Minimal Wave", "Vaporwave"] },
-    { id: "bass", genres: ["Electronic"], styles: ["Dubstep", "UK Garage", "Speed Garage", "Bassline", "Grime", "Future Garage", "Footwork", "Juke", "UK Funky"] },
-    { id: "hard", genres: ["Electronic"], styles: ["Hardcore", "Gabber", "Happy Hardcore", "Hardstyle", "Jumpstyle", "Makina", "Speedcore", "Freetekno"] },
-    { id: "euro", genres: ["Electronic"], styles: ["Eurodance", "Italodance", "Euro House", "Hands Up", "Europop", "Dance-pop", "Eurobeat", "Donk"] },
+    { id: "downtempo", genres: ["Electronic"], styles: ["Downtempo", "Trip Hop", "Future Jazz", "Acid Jazz", "Balearic", "Chillwave", "Dub", "Illbient", "Jazzdance"] },
+    { id: "experimental", genres: ["Electronic"], styles: ["IDM", "Glitch", "Experimental", "Abstract", "Noise", "Industrial", "Rhythmic Noise", "Leftfield", "Chiptune", "Electroacoustic", "Sound Collage", "Plunderphonics", "Harsh Noise Wall", "Skweee"] },
+    { id: "electro", genres: ["Electronic"], styles: ["Electro", "Electroclash", "Miami Bass", "Freestyle", "Ghettotech", "Bass Music", "Baltimore Club", "Jersey Club", "Glitch Hop", "Favela Funk", "Kuduro"] },
+    { id: "wave", genres: ["Electronic"], styles: ["Synth-pop", "New Wave", "Darkwave", "EBM", "Synthwave", "Coldwave", "Minimal Wave", "Vaporwave", "New Beat", "Dark Electro", "Witch House", "Dungeon Synth"] },
+    { id: "bass", genres: ["Electronic"], styles: ["Dubstep", "UK Garage", "Speed Garage", "Bassline", "Grime", "Future Garage", "Footwork", "Juke", "UK Funky", "Future Bass", "Deconstructed Club", "Moombahton"] },
+    { id: "hard", genres: ["Electronic"], styles: ["Hardcore", "Gabber", "Happy Hardcore", "Hardstyle", "Jumpstyle", "Makina", "Speedcore", "Freetekno", "Doomcore", "J-Core", "Lento Violento", "Nerdcore Techno"] },
+    { id: "euro", genres: ["Electronic"], styles: ["Eurodance", "Italodance", "Euro House", "Hands Up", "Europop", "Dance-pop", "Eurobeat", "Donk", "Disco Polo", "Hyperpop", "Electro Swing"] },
   ];
   const KEEP_GENRES = ["Electronic"];/*END*/
   const SECT = SECTORS.map((s) => ({ id: s.id, genres: new Set(s.genres), styles: new Set(s.styles) }));

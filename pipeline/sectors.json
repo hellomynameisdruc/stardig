@@ -1,5 +1,5 @@
 {
-  "_comment": "Galaxies of the map. A release joins a galaxy if one of its genres is in `genres` and one of its styles is in `styles`. keep_genres: releases of these genres are kept in the raw file even when they match no galaxy, so galaxies can be regrouped later without parsing the dump again. min_style: releases a style needs to become a star (default: 0.4% of the galaxy, at least 300). Keep in sync with pipeline/browser_parse.js (a test checks).",
+  "_comment": "Galaxies of the map. A release joins a galaxy if one of its genres is in `genres` and one of its styles is in `styles`. keep_genres: releases of these genres are kept in the raw file even when they match no galaxy, so galaxies can be regrouped later without parsing the dump again. Keep in sync with pipeline/browser_parse.js (a test checks). combos: styles Discogs has no tag for, made from tags that come together (a release tagged Acid and a trance style is Acid Trance too). A galaxy's own style becomes a star from MIN_CORE_RELEASES releases (config.py). hue: the galaxy's colour on the wheel (0–1), pinned so a rebuilt map keeps its colours. at: the galaxy's direction from the map's middle (degrees); a rebuilt map is turned (or flipped) to keep galaxies where they were.",
   "sectors": [
     {
       "id": "house",
@@ -23,9 +23,21 @@
         "Afro House",
         "Jackin House",
         "Funky House",
-        "Tribal House"
+        "Tribal House",
+        "Future House",
+        "Tropical House",
+        "French House",
+        "Ambient House",
+        "Microhouse",
+        "Beatdown",
+        "Ghetto",
+        "Kwaito",
+        "Gqom",
+        "Amapiano"
       ],
-      "min_style": 1500
+      "min_style": 1500,
+      "hue": 0.6494,
+      "at": -149
     },
     {
       "id": "techno",
@@ -43,8 +55,13 @@
         "Schranz",
         "Acid",
         "Bleep",
-        "Tribal"
-      ]
+        "Tribal",
+        "Hard Beat",
+        "Hyper Techno",
+        "Bouncy Techno"
+      ],
+      "hue": 0.4959,
+      "at": 139
     },
     {
       "id": "disco",
@@ -60,7 +77,9 @@
         "Euro-Disco",
         "Hi NRG",
         "Boogie"
-      ]
+      ],
+      "hue": 0.8791,
+      "at": -72
     },
     {
       "id": "trance",
@@ -74,8 +93,13 @@
         "Psy-Trance",
         "Goa Trance",
         "Hard Trance",
-        "Tech Trance"
-      ]
+        "Tech Trance",
+        "Neo Trance",
+        "Euro Trance",
+        "Acid Trance"
+      ],
+      "hue": 0.5722,
+      "at": 165
     },
     {
       "id": "dnb",
@@ -92,7 +116,9 @@
         "Big Beat",
         "Breakcore",
         "Halftime"
-      ]
+      ],
+      "hue": 0.3415,
+      "at": 89
     },
     {
       "id": "ambient",
@@ -107,7 +133,9 @@
         "New Age",
         "Berlin-School",
         "Field Recording"
-      ]
+      ],
+      "hue": 0.2642,
+      "at": 51
     },
     {
       "id": "downtempo",
@@ -123,8 +151,11 @@
         "Balearic",
         "Chillwave",
         "Dub",
-        "Illbient"
-      ]
+        "Illbient",
+        "Jazzdance"
+      ],
+      "hue": 0.187,
+      "at": 31
     },
     {
       "id": "experimental",
@@ -140,8 +171,16 @@
         "Noise",
         "Industrial",
         "Rhythmic Noise",
-        "Leftfield"
-      ]
+        "Leftfield",
+        "Chiptune",
+        "Electroacoustic",
+        "Sound Collage",
+        "Plunderphonics",
+        "Harsh Noise Wall",
+        "Skweee"
+      ],
+      "hue": 0.1108,
+      "at": 11
     },
     {
       "id": "electro",
@@ -155,8 +194,15 @@
         "Miami Bass",
         "Freestyle",
         "Ghettotech",
-        "Bass Music"
-      ]
+        "Bass Music",
+        "Baltimore Club",
+        "Jersey Club",
+        "Glitch Hop",
+        "Favela Funk",
+        "Kuduro"
+      ],
+      "hue": 0.9563,
+      "at": -55
     },
     {
       "id": "wave",
@@ -172,8 +218,14 @@
         "Synthwave",
         "Coldwave",
         "Minimal Wave",
-        "Vaporwave"
-      ]
+        "Vaporwave",
+        "New Beat",
+        "Dark Electro",
+        "Witch House",
+        "Dungeon Synth"
+      ],
+      "hue": 0.0335,
+      "at": -31
     },
     {
       "id": "bass",
@@ -190,8 +242,13 @@
         "Future Garage",
         "Footwork",
         "Juke",
-        "UK Funky"
-      ]
+        "UK Funky",
+        "Future Bass",
+        "Deconstructed Club",
+        "Moombahton"
+      ],
+      "hue": 0.7256,
+      "at": -132
     },
     {
       "id": "hard",
@@ -207,8 +264,14 @@
         "Jumpstyle",
         "Makina",
         "Speedcore",
-        "Freetekno"
-      ]
+        "Freetekno",
+        "Doomcore",
+        "J-Core",
+        "Lento Violento",
+        "Nerdcore Techno"
+      ],
+      "hue": 0.4187,
+      "at": 123
     },
     {
       "id": "euro",
@@ -224,11 +287,32 @@
         "Europop",
         "Dance-pop",
         "Eurobeat",
-        "Donk"
-      ]
+        "Donk",
+        "Disco Polo",
+        "Hyperpop",
+        "Electro Swing"
+      ],
+      "hue": 0.8028,
+      "at": -106
     }
   ],
   "keep_genres": [
     "Electronic"
+  ],
+  "combos": [
+    {
+      "style": "Acid Trance",
+      "all": [
+        "Acid"
+      ],
+      "any": [
+        "Trance",
+        "Hard Trance",
+        "Goa Trance",
+        "Psy-Trance",
+        "Progressive Trance",
+        "Tech Trance"
+      ]
+    }
   ]
 }
