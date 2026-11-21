@@ -10,7 +10,8 @@ import type { Player } from "./youtubePlayer";
 
 const KEY = "kosmos-fade";
 let secs = 0, player: Player, fadingIn = 0, inPending = false, out = false;
-const note = (text: string) => { const n = $("fadeNote"); n.hidden = !text; n.textContent = text; };
+// while the test is on the note always shows, dim, so it's plain the fade is on; it lights up during a fade
+const note = (text: string) => { const n = $("fadeNote"); n.hidden = !secs; n.classList.toggle("idle", !text); n.textContent = text || `FADE ${secs}S · ON AUTO`; };
 
 /** the next track was started by the end of this one (not by a click) */
 export function fadeNext() { if (secs) inPending = true; }
@@ -32,6 +33,7 @@ export function initFade(p: Player) {
     secs = +(browserKV.get(KEY) || 0);
   } catch { secs = 0; }
   if (!secs) return;
+  note("");
   setInterval(() => {
     if (!player.playing) return;
     if (fadingIn) {

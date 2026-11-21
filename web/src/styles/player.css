@@ -104,3 +104,4 @@
 
 /* a fade between tracks under way (ui/fade.ts) */
 .fade-note { width: fit-content; margin: 4px 0 0 auto; padding: 0 5px; border: 1px solid var(--gold, #ffd166); color: var(--gold, #ffd166); font-size: var(--fs-xs); letter-spacing: .08em; animation: flicker 2s infinite }
+.fade-note.idle { opacity: .5; animation: none }
