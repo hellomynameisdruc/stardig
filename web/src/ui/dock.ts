@@ -10,7 +10,6 @@ import { onFrame, viewportEl } from "../render/scene";
 import { cam, LOD_TRACKS } from "../render/camera";
 import { ticker } from "./ticker";
 import { say } from "./rail";
-import { fadeCancel, fadeNext, fadeStarted, initFade } from "./fade";
 import { reportDead } from "../cloud/deadShared";
 import { listPickerFor } from "./listPicker";
 import { provide } from "../app/ports";
@@ -34,7 +33,6 @@ export const ICON = {
 };
 
 export let player: Player;
-let wasOn = false;
 let dock: HTMLElement, pill: HTMLElement, seekEl: HTMLInputElement, volEl: HTMLInputElement;
 let seeking = false;
 /** last seek gesture, for the scrub effect on the signal scope */
@@ -143,7 +141,7 @@ export function initDock() {
   $("pPrev").innerHTML = ICON.prev; $("pNext").innerHTML = ICON.next; $("pToggle").innerHTML = ICON.pause; $("pLike").innerHTML = ICON.beacon; $("pList").innerHTML = ICON.list; $("dockCast").innerHTML = ICON.cast; $("pShare").innerHTML = ICON.share;
 
   player = new Player("yt", {
-    onEnded: () => { if (!state.following && $<HTMLInputElement>("autopilot").checked) { fadeNext(); next(); } },
+    onEnded: () => { if (!state.following && $<HTMLInputElement>("autopilot").checked) next(); },
     onError: (code) => {
       // removed, private (100) or not allowed on other sites (101, 150): that signal is dead for good,
       // so remember it and never steer here again. Other errors may pass, so those are only skipped.
@@ -151,12 +149,11 @@ export function initDock() {
       if (gone && np && ch) { dead.add(ch.yt[np.i]); state.dirty = true; }
       say(code === 101 || code === 150 ? "The owner doesn't allow this video elsewhere. Signal marked dark, jumping on" : gone ? "Signal lost: the video was removed. Marked dark, jumping on" : "Video unavailable. Jumping to a nearby signal", "err");
       if (gone && np && ch) reportDead(ch.yt[np.i], code);
-      fadeNext(); setTimeout(next, gone ? 900 : 1500);
+      setTimeout(next, gone ? 900 : 1500);
     },
-    onPlayingChange: (p) => { if (p && !wasOn) fadeStarted(); wasOn = p; holdMediaKeys(p); $("live").classList.toggle("on", p); state.onAir = p; $("pToggle").innerHTML = p ? ICON.pause : ICON.play; $("pToggle").setAttribute("aria-label", p ? "Pause" : "Play"); ticker(); },
+    onPlayingChange: (p) => { holdMediaKeys(p); $("live").classList.toggle("on", p); state.onAir = p; $("pToggle").innerHTML = p ? ICON.pause : ICON.play; $("pToggle").setAttribute("aria-label", p ? "Pause" : "Play"); ticker(); },
   });
 
-  initFade(player);
   $("pNext").onclick = next;
   $("pPrev").onclick = prev;
   $("pToggle").onclick = () => player.toggle();
@@ -217,7 +214,7 @@ export function initDock() {
   });
   seekEl.addEventListener("change", () => { player.seek(+seekEl.value / 1000 * player.duration()); seeking = false; scrub.t = performance.now(); });
   const v = prefs.volume; if (v !== null) volEl.value = String(v);
-  const applyVol = () => { fadeCancel(); player.setVolume(+volEl.value); paintRange(volEl); prefs.volume = +volEl.value; };
+  const applyVol = () => { player.setVolume(+volEl.value); paintRange(volEl); prefs.volume = +volEl.value; };
   volEl.addEventListener("input", applyVol); applyVol();
   setInterval(() => {
     if (dock.hidden || seeking) return;

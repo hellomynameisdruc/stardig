@@ -66,8 +66,6 @@ export class Player {
   duration(): number { return this.ready ? this.yt.getDuration() || 0 : 0; }
   seek(sec: number) { if (this.ready) this.yt.seekTo(sec, true); }
   setVolume(v: number) { this.volume = v; if (this.yt?.setVolume) this.yt.setVolume(v); }
-  /** the loudness heard right now, for a fade: the volume set (above) stays as it was */
-  setLevel(v: number) { if (this.yt?.setVolume) this.yt.setVolume(Math.max(0, Math.min(100, Math.round(v)))); }
   volume = 80;
 
   toggle() {
