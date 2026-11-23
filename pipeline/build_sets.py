@@ -97,7 +97,7 @@ class MapIndex:
             yt = base["yt"]
             ids = [yt[k:k + 11] for k in range(0, len(yt), 11)] if isinstance(yt, str) else yt
             titles, names = words["t"].split("\n"), words["an"].split("\n")
-            for i, (t, a) in enumerate(zip(titles, words["a"])):
+            for i, (t, a) in enumerate(zip(titles, words["a"], strict=False)):
                 an = norm(names[a])
                 if not an:
                     continue
@@ -116,8 +116,17 @@ class MapIndex:
         return None
 
 
-SEP = re.compile(r"\s*(?:\||/|@|·|•|:|–|—|\s-\s|\(|\)|\[|\]|\bb2b\b|\bB2B\b|\bx\b|&|,|\bat\b|\blive\b|\bLive\b|\bLIVE\b|\bDJ [Ss]et\b|\bdj set\b)\s*")
+# who plays: the head of the title, before the venue ("DJ | Boiler Room: City", "DJ @ venue for Cercle",
+# "DJ in The Lab", "A - B | HÖR - date"), split into names (b2b, x, &, " - ")
+HEAD = re.compile(r"\s*(?:\||@|/|:|\(|\[|\s(?:at|for|live|in the lab|returns to|takeover)\b)\s*", re.I)
+NAMES = re.compile(r"\s*(?:\bb2b\b|\bx\b|&|,|\s[-–—]\s|\bw/|\bwith\b|\band\b)\s*", re.I)
 NOT_DJ = {"boilerroom", "djset", "liveset", "fullset", "set", "mix", "live", "dj", "hr", "hor", "hoer", "cercle", "mixmag", "intro", "outro"}
+
+
+def djs(title: str) -> list:
+    head = HEAD.split(title, maxsplit=1)[0]
+    head = re.sub(r"\b(?:dj set|live set|full set|techno set|house set|set)\b.*$", "", head, flags=re.I)
+    return [n for n in (norm(x) for x in NAMES.split(head)) if len(n) >= 3 and n not in NOT_DJ]
 
 
 def place(v: dict, tl: list, idx: MapIndex, channel: str) -> dict:
@@ -127,19 +136,21 @@ def place(v: dict, tl: list, idx: MapIndex, channel: str) -> dict:
     for _, si in hits:
         score[si] += 3.0 / max(1, len(hits)) * 3          # the tracklist, worth 9 in all
     title = v["snippet"]["title"]
-    for part in SEP.split(title):
-        n = norm(part)
-        if len(n) < 3 or n in NOT_DJ or n == norm(channel) or n in idx.style:
+    for n in djs(title):
+        if n == norm(channel) or n in idx.style:
             continue
         own = idx.artist.get(n)
         if own:
             tot = sum(own.values())
             for si, c in own.items():
-                score[si] += 4.0 * c / tot                # a DJ's own records, worth 4
-    text = f' {spaced(title + " " + v["snippet"].get("description", "")[:600] + " " + " ".join(v["snippet"].get("tags", [])))} '
+                score[si] += 4.0 * c / tot * min(1.0, tot / 5)   # a DJ's own records, worth 4 (less for a name with few)
+    named = f" {spaced(title)} "
+    rest = f' {spaced(v["snippet"].get("description", "")[:600] + " " + " ".join(v["snippet"].get("tags", [])))} '
     for n, si in idx.words.items():
-        if f" {n} " in text:
-            score[si] += 2.0 + len(n) / 10                # a style named (longer names: more specific)
+        if f" {n} " in named:
+            score[si] += 3.0 + len(n) / 10                # a style in the title
+        elif f" {n} " in rest:
+            score[si] += 1.0                               # …or in the description and tags
     if not score:
         return {}
     top = score.most_common()
