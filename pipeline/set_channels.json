@@ -5,6 +5,9 @@
       "name": "20ft Radio"
     },
     {
+      "name": "Intercell"
+    },
+    {
       "name": "Boiler Room",
       "handle": "@boilerroom"
     },
