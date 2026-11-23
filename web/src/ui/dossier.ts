@@ -97,7 +97,7 @@ function setsShelf(si: number) {
     return `<div><div class="ph-sub shelf-h"><span>DJ SETS · ${fmt(list.length)}</span><button type="button" class="out" data-back="1">← BACK</button></div><div class="list sets">${list.slice(0, shown).map((r, k) => { const m = onMap(r); return `<button data-set="${k}" title="Play in SET MODE"><span class="n">${pad(k + 1, 3)}</span><span class="t">${esc(r.t)}<small>${esc(r.c)} · ${r.y}${m ? ` · ${m} ON THE MAP` : ""}</small></span><span class="y">${hms(r.d)}</span></button>`; }).join("")}</div>
       ${list.length > shown ? `<button type="button" class="out more-sets" data-more-sets="${si}">SHOW ${Math.min(SETS_STEP, list.length - shown)} MORE · ${fmt(list.length - shown)} LEFT</button>` : ""}</div>`;
   }
-  return `<div>${shelfHead("DJ SETS", list.length, "sets")}<div class="shelf">${list.slice(0, SHELF).map((r, k) => `<button class="shelf-i" data-set="${k}" title="${esc(r.t)}"><span class="cover"><img alt="" loading="lazy" referrerpolicy="no-referrer" src="https://i.ytimg.com/vi/${esc(r.v)}/mqdefault.jpg"><b>${hms(r.d)}</b></span><span class="nm">${esc(setHead(r.t))}</span><small>${esc(r.c)}${onMap(r) ? ` · ${onMap(r)} ON MAP` : ""}</small></button>`).join("")}</div></div>`;
+  return `<div>${shelfHead("DJ SETS", list.length, "sets")}<div class="shelf">${list.slice(0, SHELF).map((r, k) => `<button class="shelf-i" data-set="${k}" title="${esc(r.t)}"><span class="cover"><img alt="" loading="lazy" referrerpolicy="no-referrer" src="https://i.ytimg.com/vi/${esc(r.v)}/default.jpg"><b>${hms(r.d)}</b></span><span class="nm">${esc(setHead(r.t))}</span><small>${esc(r.c)}${onMap(r) ? ` · ${onMap(r)} ON MAP` : ""}</small></button>`).join("")}</div></div>`;
 }
 
 function labelsShelf(si: number, pl: number[]) {
