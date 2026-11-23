@@ -2,7 +2,8 @@
 // right now, and in which styles. Called every 5 minutes by pg_cron (supabase/live-sets.sql); writes the
 // table live_sets, which the map reads (web/src/cloud/live.ts) to light up those stars.
 // Needs the function secret YT_API_KEY (Edge Functions → Secrets): the same YouTube Data API key as on GitHub.
-// Uses per run: one playlistItems call per streaming channel (index.json's channels) and one videos call — about 14 quota units.
+// Uses per run: each channel's public feed (no quota) and one videos call per 50 of their newest videos —
+// about 4 quota units for 50 channels.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SITE = "https://stardig.app/data/sets/";
@@ -41,25 +42,33 @@ const yt = async (path: string, q: Record<string, string>) => {
 Deno.serve(async () => {
   const index = await (await fetch(SITE + "index.json")).json() as { channels: Record<string, string>; style?: Record<string, string> };
   if (!djs || Date.now() - djsAt > 6 * 3600e3) { djs = await (await fetch(SITE + "djs.json")).json() as Djs; djsAt = Date.now(); }
-  // a stream on air is among a channel's newest uploads
-  const ids: string[] = [], chanOf = new Map<string, string>();
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}").default;
+  const sb = createClient(Deno.env.get("SUPABASE_URL")!, key);
+  // a stream on air is among a channel's newest videos: read from its public feed (free, no quota), and the
+  // streams already on the map are looked at again
+  const chanOf = new Map<string, string>();
   await Promise.all(Object.entries(index.channels).map(async ([name, cid]) => {
-    const r = await yt("playlistItems", { part: "contentDetails", playlistId: "UU" + cid.slice(2), maxResults: "5" });
-    for (const it of r.items ?? []) { ids.push(it.contentDetails.videoId); chanOf.set(it.contentDetails.videoId, name); }
+    try {
+      const r = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${cid}`);
+      if (!r.ok) return;
+      const ids = [...(await r.text()).matchAll(/<yt:videoId>([\w-]{11})<\/yt:videoId>/g)].slice(0, 4).map((m) => m[1]);
+      for (const id of ids) chanOf.set(id, name);
+    } catch { /* that channel next time */ }
   }));
+  const { data: onAir } = await sb.from("live_sets").select("v");
+  for (const r of onAir ?? []) if (!chanOf.has(r.v)) chanOf.set(r.v, "");
+  const ids = [...chanOf.keys()];
   const now = new Date().toISOString(), rows = [];
   for (let k = 0; k < ids.length; k += 50) {
     const r = await yt("videos", { part: "snippet,liveStreamingDetails,status", id: ids.slice(k, k + 50).join(",") });
     for (const v of r.items ?? []) {
       if (v.snippet?.liveBroadcastContent !== "live" || v.status?.embeddable === false) continue;
-      const ch = chanOf.get(v.id) ?? v.snippet.channelTitle;
+      const ch = chanOf.get(v.id) || v.snippet.channelTitle;
       const stars = place(v.snippet.title, ch, index.style?.[ch], djs!);
       if (!stars.length) continue;
       rows.push({ v: v.id, t: v.snippet.title, c: v.snippet.channelTitle, stars, viewers: +(v.liveStreamingDetails?.concurrentViewers ?? 0), started: v.liveStreamingDetails?.actualStartTime ?? now, seen: now });
     }
   }
-  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}").default;
-  const sb = createClient(Deno.env.get("SUPABASE_URL")!, key);
   if (rows.length) { const { error } = await sb.from("live_sets").upsert(rows); if (error) return new Response(error.message, { status: 500 }); }
   await sb.from("live_sets").delete().lt("seen", now); // off air
   return Response.json({ checked: ids.length, live: rows.map((r) => `${r.c}: ${r.t} → ${r.stars.join(", ")}`) });

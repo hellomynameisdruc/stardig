@@ -2,7 +2,7 @@
 Cercle…, listed in set_channels.json), each placed in the styles it plays, with its tracklist read
 from the description and matched to tracks on the map.
 
-    YT_API_KEY=… python pipeline/build_sets.py <map data dir> <out dir>
+    YT_API_KEY=… python pipeline/build_sets.py <map data dir> <out dir> [<yesterday's sets dir>]
 
 Reads the published map (map.json, tracks/, titles/) and writes into <out dir>:
   index.json         {"built": date, "n": {star name: sets}, "channels": {name: channel id} (those that stream),
@@ -12,18 +12,21 @@ Reads the published map (map.json, tracks/, titles/) and writes into <out dir>:
   s/<slug>.json      a star's sets, most watched first:
                      [{"v": video id, "t": title, "c": channel, "d": seconds, "y": year, "w": views,
                        "tl": [[seconds or -1, "Artist — Title", yt or "", star name or ""], …]}, …]
-Only the YouTube Data API (an API key, read-only): lists of uploads and videos' details. Nothing is
-downloaded but that text; it's rebuilt from scratch every day, so nothing kept is older than a day.
+  cache.json.gz      what was read (so a day reads only what's new): channel ids, the videos seen per
+                     channel, the sets' details; each set's details are read again within 25 days
+Only the YouTube Data API (an API key, read-only): lists of uploads and videos' details, nothing but text.
 """
+import gzip
 import json
 import os
 import re
 import sys
 import unicodedata
+import urllib.error
 import urllib.parse
 import urllib.request
 from collections import Counter, defaultdict
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 API = "https://www.googleapis.com/youtube/v3/"
@@ -132,13 +135,12 @@ def djs(title: str) -> list:
     return [n for n in (norm(x) for x in NAMES.split(head)) if len(n) >= 3 and n not in NOT_DJ]
 
 
-def place(v: dict, tl: list, idx: MapIndex, channel: str) -> dict:
+def place(title: str, text: str, tl: list, idx: MapIndex, channel: str) -> dict:
     """votes per star from what the set plays (its tracklist), who plays it (the DJs' own tracks) and what it's called"""
     score = Counter()
     hits = [h for h in (idx.find(a, t) for _, a, t in tl if a) if h]
     for _, si in hits:
         score[si] += 3.0 / max(1, len(hits)) * 3          # the tracklist, worth 9 in all
-    title = v["snippet"]["title"]
     for n in djs(title):
         if n == norm(channel) or n in idx.style:
             continue
@@ -148,7 +150,7 @@ def place(v: dict, tl: list, idx: MapIndex, channel: str) -> dict:
             for si, c in own.items():
                 score[si] += 4.0 * c / tot * min(1.0, tot / 5)   # a DJ's own records, worth 4 (less for a name with few)
     named = f" {spaced(title)} "
-    rest = f' {spaced(v["snippet"].get("description", "")[:600] + " " + " ".join(v["snippet"].get("tags", [])))} '
+    rest = f" {spaced(text)} "
     for n, si in idx.words.items():
         if f" {n} " in named:
             score[si] += 3.0 + len(n) / 10                # a style in the title
@@ -164,40 +166,51 @@ def place(v: dict, tl: list, idx: MapIndex, channel: str) -> dict:
     return {"stars": keep, "hits": hits}
 
 
-# —— YouTube
-def get(path: str, **q):
+# —— YouTube: every call counted against the day's budget (the API's quota is 10,000 units a day; the
+# live check on Supabase takes its share too)
+BUDGET = int(os.environ.get("SETS_BUDGET", "6000"))
+units = 0
+
+
+class OutOfBudget(Exception):
+    pass
+
+
+def get(path: str, cost: int = 1, **q):
+    global units
+    if units + cost > BUDGET:
+        raise OutOfBudget
+    units += cost
     q["key"] = os.environ["YT_API_KEY"]
-    with urllib.request.urlopen(API + path + "?" + urllib.parse.urlencode(q), timeout=30) as r:
-        return json.load(r)
+    try:
+        with urllib.request.urlopen(API + path + "?" + urllib.parse.urlencode(q), timeout=30) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        if e.code == 403:             # the day's quota spent (or the key refused): stop here, keep what's read
+            print(f"YouTube refused: {e}")
+            raise OutOfBudget from e
+        raise
+
+
+def each(names, step):
+    """step(name) for every channel; one channel's trouble (a playlist gone, say) doesn't stop the others"""
+    for n in names:
+        try:
+            step(n)
+        except (urllib.error.URLError, KeyError, ValueError) as e:
+            print(f"{n}: skipped ({e})")
 
 
 def channel_id(name: str, handle: str):
     if handle:
-        try:
-            items = get("channels", part="id", forHandle=handle).get("items") or []
-            if items:
-                return items[0]["id"]
-        except Exception as e:  # noqa: BLE001
-            print(f"  {handle}: {e}")
-    items = get("search", part="snippet", q=name, type="channel", maxResults=1).get("items") or []
+        items = get("channels", part="id", forHandle=handle).get("items") or []
+        if items:
+            return items[0]["id"]
+    items = get("search", 100, part="snippet", q=name, type="channel", maxResults=1).get("items") or []
     if items:
         print(f"  {name}: found by search as {items[0]['snippet']['title']!r}")
         return items[0]["snippet"]["channelId"]
     return None
-
-
-def uploads(cid: str, limit: int):
-    ids, token = [], None
-    while len(ids) < limit:
-        q = {"part": "contentDetails", "playlistId": "UU" + cid[2:], "maxResults": 50}
-        if token:
-            q["pageToken"] = token
-        r = get("playlistItems", **q)
-        ids += [it["contentDetails"]["videoId"] for it in r.get("items", [])]
-        token = r.get("nextPageToken")
-        if not token:
-            break
-    return ids
 
 
 DUR = re.compile(r"P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?")
@@ -208,56 +221,139 @@ def duration(iso: str) -> int:
     return d * 86400 + h * 3600 + m * 60 + s
 
 
-def videos(ids: list):
+def details(ids: list):
+    """videos' details, 50 a call; a video that isn't returned is gone (deleted, private)"""
     for k in range(0, len(ids), 50):
         yield from get("videos", part="snippet,contentDetails,status,statistics", id=",".join(ids[k:k + 50]), maxResults=50).get("items", [])
 
 
-def build(data: Path, out: Path):
+def as_set(v: dict):
+    """a video worth keeping: long, public, playable here, not a stream that's on or to come"""
+    sn = v["snippet"]
+    if sn.get("liveBroadcastContent", "none") != "none" or not v["status"].get("embeddable") or v["status"].get("privacyStatus") != "public":
+        return None
+    d = duration(v["contentDetails"].get("duration", "PT0S"))
+    if d < MIN_SECONDS:
+        return None
+    return {"t": sn["title"], "c": sn.get("channelTitle", ""), "d": d, "y": int(sn["publishedAt"][:4]),
+            "w": int(v.get("statistics", {}).get("viewCount", 0)),
+            "tl": tracklist(sn.get("description", "")), "dd": (sn.get("description", "")[:600] + " " + " ".join(sn.get("tags", []))).strip(),
+            "at": date.today().isoformat()}
+
+
+# —— the build: what's new on each channel, the oldest details refreshed (nothing kept is older than ~25 days),
+# the rest of a new channel's back catalogue read as the budget allows (a big one takes a few days)
+REFRESH_DAYS = 25
+MAX_LOOKUPS = 10               # new channels looked up a day (a search costs 100 units)
+
+
+def read_channel(name: str, cid: str, cache: dict, complete: bool):
+    known = set(cache["known"].get(cid, []))
+    fresh, token, finished = [], None, False
+    while True:
+        q = {"part": "contentDetails", "playlistId": "UU" + cid[2:], "maxResults": 50}
+        if token:
+            q["pageToken"] = token
+        r = get("playlistItems", **q)
+        page = [it["contentDetails"]["videoId"] for it in r.get("items", [])]
+        new = [i for i in page if i not in known and i not in fresh]
+        fresh += new
+        token = r.get("nextPageToken")
+        if not token:
+            finished = True
+            break
+        if complete and len(new) < len(page):
+            break                     # into what was read before
+    got = 0
+    for k in range(0, len(fresh), 50):
+        batch = fresh[k:k + 50]
+        seen = set()
+        for v in details(batch):
+            seen.add(v["id"])
+            if v["snippet"].get("liveBroadcastContent", "none") != "none":
+                continue              # a stream on or to come: read again once it's over
+            known.add(v["id"])
+            rec = as_set(v)
+            if rec:
+                rec["c"] = rec["c"] or name
+                cache["sets"][v["id"]] = rec
+                got += 1
+        known.update(i for i in batch if i not in seen)     # gone
+        cache["known"][cid] = sorted(known)
+    cache["known"][cid] = sorted(known)
+    return finished, len(fresh), got
+
+
+def build(data: Path, out: Path, prev: Path | None):
     cfg = json.loads((Path(__file__).parent / "set_channels.json").read_text())
     idx = MapIndex(data)
     print(f"map: {len(idx.stars)} stars, {len(idx.track):,} title keys, {len(idx.artist):,} artists")
+    cache = {"channels": {}, "done": [], "known": {}, "sets": {}}
+    if prev and (prev / "cache.json.gz").exists():
+        cache.update(json.loads(gzip.decompress((prev / "cache.json.gz").read_bytes())))
+    if prev and (prev / "index.json").exists():   # channel ids found before the cache existed
+        old = json.loads((prev / "index.json").read_text())
+        for n, c in {**old.get("channels", {}), **old.get("all", {})}.items():
+            cache["channels"].setdefault(n, c)
+    print(f"cache: {len(cache['sets']):,} sets, {sum(len(x) for x in cache['known'].values()):,} videos read before")
+    names = [ch["name"] for ch in cfg["channels"]]
+    try:
+        # 1. channels: the ones not met before are looked up (a search costs 100, so a few a day)
+        def look(n):
+            ch = next(c for c in cfg["channels"] if c["name"] == n)
+            cid = channel_id(n, ch.get("handle", ""))
+            if cid:
+                cache["channels"][n] = cid
+            else:
+                print(f"{n}: channel not found")
+        each([n for n in names if n not in cache["channels"]][:MAX_LOOKUPS], look)
+
+        # 2. what's new on the channels read through before
+        def new(n):
+            _, k, got = read_channel(n, cache["channels"][n], cache, True)
+            if k:
+                print(f"{n}: {k} new uploads, {got} sets")
+        each([n for n in names if n in cache["done"] and n in cache["channels"]], new)
+        # 3. the oldest details read again (views, still there, still playable)
+        cutoff = (date.today() - timedelta(days=REFRESH_DAYS)).isoformat()
+        old_ids = [v for _, v in sorted((r["at"], v) for v, r in cache["sets"].items() if r["at"] < cutoff)]
+        for k in range(0, len(old_ids), 50):
+            batch = old_ids[k:k + 50]
+            back = {v["id"]: v for v in details(batch)}
+            for vid in batch:
+                rec = as_set(back[vid]) if vid in back else None
+                if rec:
+                    rec["c"] = rec["c"] or cache["sets"][vid]["c"]
+                    cache["sets"][vid] = rec
+                else:
+                    cache["sets"].pop(vid, None)
+        if old_ids:
+            print(f"refreshed {len(old_ids)} sets")
+
+        # 4. the back catalogues not finished yet, as far as the budget goes
+        def back(n):
+            finished, k, got = read_channel(n, cache["channels"][n], cache, False)
+            if finished:
+                cache["done"].append(n)
+            print(f"{n}: {k} uploads read, {got} sets{'' if finished else ' (more next time)'}")
+        each([n for n in names if n not in cache["done"] and n in cache["channels"]], back)
+    except OutOfBudget:
+        print(f"budget of {BUDGET} units reached: the rest next time")
+    print(f"YouTube units used: {units}")
+
+    # —— the sets placed in styles, a file per star
     per = defaultdict(list)
-    seen, found = set(), {}
-    for ch in cfg["channels"]:
-        try:
-            cid = channel_id(ch["name"], ch.get("handle", ""))
-            if not cid:
-                print(f"{ch['name']}: channel not found")
-                continue
-            ids = uploads(cid, ch.get("limit", 6000))
-            vs = list(videos(ids))
-        except Exception as e:  # noqa: BLE001 — one channel's trouble doesn't stop the others…
-            if getattr(e, "code", 0) == 403:  # …but the day's quota running out (or a bad key) does: keep yesterday's sets
-                sys.exit(f"YouTube refused ({e}): the daily quota may be spent. Nothing published.")
-            print(f"{ch['name']}: skipped ({e})")
+    for vid, r in cache["sets"].items():
+        p = place(r["t"], r["dd"], r["tl"], idx, r["c"])
+        if not p:
             continue
-        found[ch["name"]] = cid
-        n = placed = 0
-        for v in vs:
-            if v["id"] in seen or v["snippet"].get("liveBroadcastContent", "none") != "none":
-                continue
-            if not v["status"].get("embeddable") or v["status"].get("privacyStatus") != "public":
-                continue
-            d = duration(v["contentDetails"].get("duration", "PT0S"))
-            if d < MIN_SECONDS:
-                continue
-            seen.add(v["id"])
-            n += 1
-            tl = tracklist(v["snippet"].get("description", ""))
-            p = place(v, tl, idx, ch["name"])
-            if not p:
-                continue
-            placed += 1
-            rows = []
-            for sec, a, t in tl:
-                hit = idx.find(a, t) if a else None
-                rows.append([sec, f"{a} — {t}" if a else t, hit[0] if hit else "", idx.stars[hit[1]] if hit else ""])
-            rec = {"v": v["id"], "t": v["snippet"]["title"], "c": v["snippet"].get("channelTitle", ch["name"]), "d": d,
-                   "y": int(v["snippet"]["publishedAt"][:4]), "w": int(v.get("statistics", {}).get("viewCount", 0)), "tl": rows}
-            for si in p["stars"]:
-                per[si].append(rec)
-        print(f"{ch['name']}: {len(ids)} uploads, {n} sets, {placed} placed")
+        rows = []
+        for sec, a, t in r["tl"]:
+            hit = idx.find(a, t) if a else None
+            rows.append([sec, f"{a} — {t}" if a else t, hit[0] if hit else "", idx.stars[hit[1]] if hit else ""])
+        rec = {"v": vid, "t": r["t"], "c": r["c"], "d": r["d"], "y": r["y"], "w": r["w"], "tl": rows}
+        for si in p["stars"]:
+            per[si].append(rec)
     (out / "s").mkdir(parents=True, exist_ok=True)
     counts = {}
     for si, recs in per.items():
@@ -265,18 +361,19 @@ def build(data: Path, out: Path):
         recs = recs[:PER_STAR]
         counts[idx.stars[si]] = len(recs)
         json.dump(recs, open(out / "s" / f"{slug(idx.stars[si])}.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    found = {n: c for n, c in cache["channels"].items() if n in names}
     style = {ch["name"]: ch["style"] for ch in cfg["channels"] if ch.get("style") and ch["name"] in found}
-    # "channels": the ones that stream, for the live check (which reads this file); "all": every channel read
-    streams = {n: c for n, c in found.items() if any(ch["name"] == n and ch.get("live") for ch in cfg["channels"])}
-    json.dump({"built": date.today().isoformat(), "n": counts, "channels": streams, "all": found, "style": style}, open(out / "index.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    # the live check (supabase/functions/live-sets) watches every channel through its feed: "channels"
+    json.dump({"built": date.today().isoformat(), "n": counts, "channels": found, "style": style}, open(out / "index.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     djs = {}
     for a, c in idx.artist.items():
         tot = sum(c.values())
         if tot >= 3:
             djs[a] = [[si, round(4.0 * n / tot * min(1.0, tot / 5), 2)] for si, n in c.most_common(2) if n / tot >= 0.25]
     json.dump({"stars": idx.stars, "a": djs}, open(out / "djs.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
-    print(f"{sum(counts.values())} sets in {len(counts)} stars")
+    (out / "cache.json.gz").write_bytes(gzip.compress(json.dumps(cache, ensure_ascii=False, separators=(",", ":")).encode()))
+    print(f"{len(cache['sets']):,} sets known; {sum(counts.values()):,} placed in {len(counts)} stars")
 
 
 if __name__ == "__main__":
-    build(Path(sys.argv[1]), Path(sys.argv[2]))
+    build(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]) if len(sys.argv) > 3 else None)

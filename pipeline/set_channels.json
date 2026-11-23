@@ -1,26 +1,22 @@
 {
-  "about": "YouTube channels that publish DJ sets, for build_sets.py (and live streams, supabase/functions/live-sets). handle: the channel's @name (empty or wrong: the name is searched for and the log says what was found). style: where its live streams go when the DJ isn't known. limit: newest uploads read. live: the channel streams, so it's watched for live sets every few minutes (supabase/functions/live-sets reads index.json's channels).",
+  "about": "YouTube channels that publish DJ sets, for build_sets.py; the live check (supabase/functions/live-sets) watches all of them. handle: the channel's @name (empty or wrong: the name is searched for once, and the log says what was found). style: where its live streams go when the DJ isn't known.",
   "channels": [
     {
       "name": "Boiler Room",
-      "handle": "@boilerroom",
-      "live": true
+      "handle": "@boilerroom"
     },
     {
       "name": "HÖR BERLIN",
       "handle": "@HOR.BERLIN",
-      "style": "Techno",
-      "live": true
+      "style": "Techno"
     },
     {
       "name": "Cercle",
-      "handle": "@Cercle",
-      "live": true
+      "handle": "@Cercle"
     },
     {
       "name": "Mixmag",
-      "handle": "@Mixmag",
-      "live": true
+      "handle": "@Mixmag"
     },
     {
       "name": "Keep Hush",
@@ -28,24 +24,20 @@
     },
     {
       "name": "Dekmantel",
-      "handle": "@Dekmantel",
-      "live": true
+      "handle": "@Dekmantel"
     },
     {
       "name": "The Lot Radio",
-      "handle": "@TheLotRadio",
-      "live": true
+      "handle": "@TheLotRadio"
     },
     {
       "name": "Kiosk Radio",
-      "handle": "@KioskRadio",
-      "live": true
+      "handle": "@KioskRadio"
     },
     {
       "name": "Awakenings Festival",
       "handle": "",
-      "style": "Techno",
-      "live": true
+      "style": "Techno"
     },
     {
       "name": "Resident Advisor",
@@ -53,14 +45,12 @@
     },
     {
       "name": "DJ Mag",
-      "handle": "",
-      "live": true
+      "handle": ""
     },
     {
       "name": "Defected Records",
       "handle": "@DefectedRecords",
-      "style": "House",
-      "live": true
+      "style": "House"
     },
     {
       "name": "Glitterbox",
@@ -80,8 +70,7 @@
     {
       "name": "A State Of Trance",
       "handle": "@AStateOfTrance",
-      "style": "Trance",
-      "live": true
+      "style": "Trance"
     },
     {
       "name": "UKF",
@@ -101,19 +90,110 @@
     {
       "name": "Q-dance",
       "handle": "@Qdance",
-      "style": "Hardstyle",
-      "live": true
+      "style": "Hardstyle"
     },
     {
       "name": "Verknipt Events",
       "handle": "",
-      "style": "Hard Techno",
-      "live": true
+      "style": "Hard Techno"
     },
     {
       "name": "Drumcode",
       "handle": "",
       "style": "Techno"
+    },
+    {
+      "name": "Rinse FM"
+    },
+    {
+      "name": "NTS Radio"
+    },
+    {
+      "name": "Worldwide FM"
+    },
+    {
+      "name": "Refuge Worldwide"
+    },
+    {
+      "name": "Fabric London"
+    },
+    {
+      "name": "Ministry of Sound"
+    },
+    {
+      "name": "Tomorrowland",
+      "handle": "@tomorrowland"
+    },
+    {
+      "name": "Ultra Music Festival"
+    },
+    {
+      "name": "Insomniac Events"
+    },
+    {
+      "name": "Club Space Miami"
+    },
+    {
+      "name": "elrow"
+    },
+    {
+      "name": "Circoloco"
+    },
+    {
+      "name": "Afterlife",
+      "style": "Techno"
+    },
+    {
+      "name": "Kappa FuturFestival"
+    },
+    {
+      "name": "Sónar Festival"
+    },
+    {
+      "name": "Movement Detroit"
+    },
+    {
+      "name": "DGTL"
+    },
+    {
+      "name": "Draaimolen Festival"
+    },
+    {
+      "name": "Teletech",
+      "style": "Hard Techno"
+    },
+    {
+      "name": "Masters of Hardcore",
+      "style": "Hardcore"
+    },
+    {
+      "name": "DnB Allstars",
+      "style": "Drum n Bass"
+    },
+    {
+      "name": "Liquicity",
+      "style": "Drum n Bass"
+    },
+    {
+      "name": "Crack Magazine"
+    },
+    {
+      "name": "Time Warp",
+      "style": "Techno"
+    },
+    {
+      "name": "Monument Festival"
+    },
+    {
+      "name": "Possession",
+      "style": "Hard Techno"
+    },
+    {
+      "name": "Exhale",
+      "style": "Hard Techno"
+    },
+    {
+      "name": "Fuse Brussels"
     }
   ]
 }

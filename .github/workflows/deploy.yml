@@ -76,6 +76,7 @@ jobs:
         run: |
           if git fetch --depth 1 origin sets 2>/dev/null; then
             mkdir -p web/public/data/sets && git archive FETCH_HEAD | tar -x -C web/public/data/sets
+            rm -f web/public/data/sets/cache.json.gz   # the build's own memory, not for the site
             echo "Sets: $(du -sh web/public/data/sets | cut -f1)"
           fi
 
