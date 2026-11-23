@@ -71,7 +71,9 @@ function sector() {
 }
 
 /** a star's DJ sets (data/sets), drawn when they've arrived */
-const SETS_SHOWN = 30;
+const SETS_STEP = 30;
+/** how many of a star's sets are listed (SHOW MORE adds a step) */
+const setsShown = new Map<number, number>();
 function djSets(si: number) {
   const name = galaxy.stars[si].name, again = () => { if (state.sel?.kind === "star" && state.sel.s === si) renderDossier(); };
   const live = state.live.get(si) ?? [];
@@ -80,8 +82,9 @@ function djSets(si: number) {
   const n = setCountsNow?.[name] ?? 0;
   if (!n && !live.length) return "";
   const list = n ? setsNow.get(name) : []; if (n && !list) loadStarSets(name).then(again);
-  return `<div><div class="ph-sub">DJ SETS · ${live.length ? `<b class="live-k">● ${live.length} LIVE</b>${n ? " · " : ""}` : ""}${n ? fmt(n) : ""}</div><div class="list sets">${liveRows}${list ? list.slice(0, SETS_SHOWN).map((r, k) => { const m = onMap(r); return `<button data-set="${k}" title="Play in SET MODE"><span class="n">${pad(k + 1, 3)}</span><span class="t">${esc(r.t)}<small>${esc(r.c)} · ${r.y}${m ? ` · ${m} ON THE MAP` : ""}</small></span><span class="y">${hms(r.d)}</span></button>`; }).join("") : `<p class="note">LOADING…</p>`}</div>
-    ${list && list.length > SETS_SHOWN ? `<div class="more">…and ${fmt(list.length - SETS_SHOWN)} more</div>` : ""}</div>`;
+  const shown = setsShown.get(si) ?? SETS_STEP;
+  return `<div><div class="ph-sub">DJ SETS · ${live.length ? `<b class="live-k">● ${live.length} LIVE</b>${n ? " · " : ""}` : ""}${n ? fmt(n) : ""}</div><div class="list sets">${liveRows}${list ? list.slice(0, shown).map((r, k) => { const m = onMap(r); return `<button data-set="${k}" title="Play in SET MODE"><span class="n">${pad(k + 1, 3)}</span><span class="t">${esc(r.t)}<small>${esc(r.c)} · ${r.y}${m ? ` · ${m} ON THE MAP` : ""}</small></span><span class="y">${hms(r.d)}</span></button>`; }).join("") : `<p class="note">LOADING…</p>`}</div>
+    ${list && list.length > shown ? `<button type="button" class="out more-sets" data-more-sets="${si}">SHOW ${Math.min(SETS_STEP, list.length - shown)} MORE · ${fmt(list.length - shown)} LEFT</button>` : ""}</div>`;
 }
 
 function star(si: number) {
@@ -221,6 +224,11 @@ export function initDossier() {
     const nb = t.closest<HTMLElement>("[data-neb]"); if (nb) { flyToNebula(+nb.dataset.neb!); return; }
     const po = t.closest<HTMLElement>("[data-orbit]"); if (po) { playOrbit(+po.dataset.orbit!); return; }
     const sf = t.closest<HTMLElement>("[data-shuffle]"); if (sf) { reshuffle(+sf.dataset.shuffle!); renderDossier(); return; }
+    const ms = t.closest<HTMLElement>("[data-more-sets]");
+    if (ms) {
+      const si = +ms.dataset.moreSets!, d = $("detail"), top = d.scrollTop;
+      setsShown.set(si, (setsShown.get(si) ?? SETS_STEP) + SETS_STEP); renderDossier(); d.scrollTop = top; return;
+    }
     const lv = t.closest<HTMLElement>("[data-live]");
     if (lv && state.sel?.kind === "star") {
       const nm = galaxy.stars[state.sel.s].name, x = state.live.get(state.sel.s)?.[+lv.dataset.live!];

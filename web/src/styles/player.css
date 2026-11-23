@@ -151,3 +151,4 @@ button.tc:hover { color: var(--acc) }
 .live-k { color: var(--red-ink); font-weight: 400; text-shadow: var(--red-glow) }
 .list.sets .live-row .n, .list.sets .live-row small { color: var(--red-ink) }
 .list.sets .live-row:hover { background: var(--red) }
+.more-sets { margin-top: 6px }

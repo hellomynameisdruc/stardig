@@ -27,7 +27,7 @@ from pathlib import Path
 
 API = "https://www.googleapis.com/youtube/v3/"
 MIN_SECONDS = 30 * 60          # a set, not a track or a clip
-PER_STAR = 80                  # sets kept per star (most watched first)
+PER_STAR = 500                 # sets kept per star (most watched first)
 MAX_STARS = 2                  # a set goes into its strongest style or two
 
 WORD = re.compile(r"[^0-9a-z]+")
@@ -226,7 +226,9 @@ def build(data: Path, out: Path):
                 continue
             ids = uploads(cid, ch.get("limit", 6000))
             vs = list(videos(ids))
-        except Exception as e:  # noqa: BLE001 — one channel's trouble doesn't stop the others
+        except Exception as e:  # noqa: BLE001 — one channel's trouble doesn't stop the others…
+            if getattr(e, "code", 0) == 403:  # …but the day's quota running out (or a bad key) does: keep yesterday's sets
+                sys.exit(f"YouTube refused ({e}): the daily quota may be spent. Nothing published.")
             print(f"{ch['name']}: skipped ({e})")
             continue
         found[ch["name"]] = cid

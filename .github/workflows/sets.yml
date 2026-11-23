@@ -6,7 +6,7 @@ name: DJ sets
 
 on:
   schedule:
-    - cron: "37 3 * * *"
+    - cron: "37 8 * * *"   # after YouTube's quota day starts (midnight Pacific), so a run never shares it with the day before
   workflow_dispatch:
 
 permissions:
