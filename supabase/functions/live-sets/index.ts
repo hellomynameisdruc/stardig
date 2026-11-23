@@ -1,8 +1,8 @@
 // Supabase Edge Function "live-sets": which of the set channels (pipeline/set_channels.json) is streaming
-// right now, and in which styles. Called every 10 minutes by pg_cron (supabase/live-sets.sql); writes the
+// right now, and in which styles. Called every 5 minutes by pg_cron (supabase/live-sets.sql); writes the
 // table live_sets, which the map reads (web/src/cloud/live.ts) to light up those stars.
 // Needs the function secret YT_API_KEY (Edge Functions → Secrets): the same YouTube Data API key as on GitHub.
-// Uses per run: one playlistItems call per channel and one videos call — about 23 quota units.
+// Uses per run: one playlistItems call per streaming channel (index.json's channels) and one videos call — about 14 quota units.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SITE = "https://stardig.app/data/sets/";

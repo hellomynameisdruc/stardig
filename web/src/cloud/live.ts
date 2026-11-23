@@ -1,5 +1,5 @@
 // LIVE: DJ sets streaming right now (the table live_sets, kept by the Edge Function live-sets every ten
-// minutes). Read with a plain request every two minutes; the stars they're placed in light up.
+// minutes). Read with a plain request every minute; the stars they're placed in light up.
 import { galaxy, state } from "../app/state";
 import { ui } from "../app/ports";
 import { CLOUD_KEY, CLOUD_URL } from "./client";
@@ -20,4 +20,4 @@ async function poll() {
     state.live = m; state.dirty = true; ui.liveChanged();
   } catch { /* offline, or the table isn't there yet */ }
 }
-export function initLive() { setTimeout(poll, 3000); setInterval(poll, 120_000); }
+export function initLive() { setTimeout(poll, 3000); setInterval(poll, 60_000); }

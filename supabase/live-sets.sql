@@ -18,9 +18,9 @@ drop policy if exists "live sets are public" on public.live_sets;
 create policy "live sets are public" on public.live_sets for select to anon, authenticated using (true);
 -- written only by the function (with the service key, past these rules)
 
--- every 10 minutes: ask the function to look (the anon key is public; it only lets the call through)
+-- every 5 minutes: ask the function to look (the anon key is public; it only lets the call through)
 select cron.unschedule('stardig-live') where exists (select 1 from cron.job where jobname = 'stardig-live');
-select cron.schedule('stardig-live', '*/10 * * * *', $$
+select cron.schedule('stardig-live', '*/5 * * * *', $$
   select net.http_post(
     url := 'https://muuaqquhqgthkfzlqkvq.supabase.co/functions/v1/live-sets',
     headers := jsonb_build_object('Content-Type', 'application/json',

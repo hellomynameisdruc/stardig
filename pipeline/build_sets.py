@@ -5,7 +5,8 @@ from the description and matched to tracks on the map.
     YT_API_KEY=… python pipeline/build_sets.py <map data dir> <out dir>
 
 Reads the published map (map.json, tracks/, titles/) and writes into <out dir>:
-  index.json         {"built": date, "n": {star name: sets}, "channels": {name: channel id}, "style": {name: star}}
+  index.json         {"built": date, "n": {star name: sets}, "channels": {name: channel id} (those that stream),
+                     "all": {name: channel id}, "style": {name: star}}
   djs.json           for placing live streams (supabase/functions/live-sets): {"stars": [names],
                      "a": {artist: [[star, weight], …]}} for artists with 3+ tracks on the map
   s/<slug>.json      a star's sets, most watched first:
@@ -265,7 +266,9 @@ def build(data: Path, out: Path):
         counts[idx.stars[si]] = len(recs)
         json.dump(recs, open(out / "s" / f"{slug(idx.stars[si])}.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     style = {ch["name"]: ch["style"] for ch in cfg["channels"] if ch.get("style") and ch["name"] in found}
-    json.dump({"built": date.today().isoformat(), "n": counts, "channels": found, "style": style}, open(out / "index.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    # "channels": the ones that stream, for the live check (which reads this file); "all": every channel read
+    streams = {n: c for n, c in found.items() if any(ch["name"] == n and ch.get("live") for ch in cfg["channels"])}
+    json.dump({"built": date.today().isoformat(), "n": counts, "channels": streams, "all": found, "style": style}, open(out / "index.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     djs = {}
     for a, c in idx.artist.items():
         tot = sum(c.values())

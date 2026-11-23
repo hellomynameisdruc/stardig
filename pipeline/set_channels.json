@@ -1,22 +1,26 @@
 {
-  "about": "YouTube channels that publish DJ sets, for build_sets.py (and live streams, supabase/functions/live-sets). handle: the channel's @name (empty or wrong: the name is searched for and the log says what was found). style: where its live streams go when the DJ isn't known. limit: newest uploads read.",
+  "about": "YouTube channels that publish DJ sets, for build_sets.py (and live streams, supabase/functions/live-sets). handle: the channel's @name (empty or wrong: the name is searched for and the log says what was found). style: where its live streams go when the DJ isn't known. limit: newest uploads read. live: the channel streams, so it's watched for live sets every few minutes (supabase/functions/live-sets reads index.json's channels).",
   "channels": [
     {
       "name": "Boiler Room",
-      "handle": "@boilerroom"
+      "handle": "@boilerroom",
+      "live": true
     },
     {
       "name": "HÖR BERLIN",
       "handle": "@HOR.BERLIN",
-      "style": "Techno"
+      "style": "Techno",
+      "live": true
     },
     {
       "name": "Cercle",
-      "handle": "@Cercle"
+      "handle": "@Cercle",
+      "live": true
     },
     {
       "name": "Mixmag",
-      "handle": "@Mixmag"
+      "handle": "@Mixmag",
+      "live": true
     },
     {
       "name": "Keep Hush",
@@ -24,20 +28,24 @@
     },
     {
       "name": "Dekmantel",
-      "handle": "@Dekmantel"
+      "handle": "@Dekmantel",
+      "live": true
     },
     {
       "name": "The Lot Radio",
-      "handle": "@TheLotRadio"
+      "handle": "@TheLotRadio",
+      "live": true
     },
     {
       "name": "Kiosk Radio",
-      "handle": "@KioskRadio"
+      "handle": "@KioskRadio",
+      "live": true
     },
     {
       "name": "Awakenings Festival",
       "handle": "",
-      "style": "Techno"
+      "style": "Techno",
+      "live": true
     },
     {
       "name": "Resident Advisor",
@@ -45,12 +53,14 @@
     },
     {
       "name": "DJ Mag",
-      "handle": ""
+      "handle": "",
+      "live": true
     },
     {
       "name": "Defected Records",
       "handle": "@DefectedRecords",
-      "style": "House"
+      "style": "House",
+      "live": true
     },
     {
       "name": "Glitterbox",
@@ -70,7 +80,8 @@
     {
       "name": "A State Of Trance",
       "handle": "@AStateOfTrance",
-      "style": "Trance"
+      "style": "Trance",
+      "live": true
     },
     {
       "name": "UKF",
@@ -90,12 +101,14 @@
     {
       "name": "Q-dance",
       "handle": "@Qdance",
-      "style": "Hardstyle"
+      "style": "Hardstyle",
+      "live": true
     },
     {
       "name": "Verknipt Events",
       "handle": "",
-      "style": "Hard Techno"
+      "style": "Hard Techno",
+      "live": true
     },
     {
       "name": "Drumcode",
