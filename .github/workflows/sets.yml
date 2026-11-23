@@ -33,6 +33,7 @@ jobs:
         env:
           YT_API_KEY: ${{ secrets.YT_API_KEY }}
         run: |
+          set -o pipefail
           test -n "$YT_API_KEY" || { echo "::error::Add the repository secret YT_API_KEY"; exit 1; }
           python pipeline/build_sets.py /tmp/map /tmp/sets | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Publish to the sets branch

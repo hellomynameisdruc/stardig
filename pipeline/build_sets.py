@@ -206,14 +206,19 @@ def build(data: Path, out: Path):
     per = defaultdict(list)
     seen, found = set(), {}
     for ch in cfg["channels"]:
-        cid = channel_id(ch["name"], ch.get("handle", ""))
-        if not cid:
-            print(f"{ch['name']}: channel not found")
+        try:
+            cid = channel_id(ch["name"], ch.get("handle", ""))
+            if not cid:
+                print(f"{ch['name']}: channel not found")
+                continue
+            ids = uploads(cid, ch.get("limit", 6000))
+            vs = list(videos(ids))
+        except Exception as e:  # noqa: BLE001 — one channel's trouble doesn't stop the others
+            print(f"{ch['name']}: skipped ({e})")
             continue
         found[ch["name"]] = cid
-        ids = uploads(cid, ch.get("limit", 6000))
         n = placed = 0
-        for v in videos(ids):
+        for v in vs:
             if v["id"] in seen or v["snippet"].get("liveBroadcastContent", "none") != "none":
                 continue
             if not v["status"].get("embeddable") or v["status"].get("privacyStatus") != "public":
