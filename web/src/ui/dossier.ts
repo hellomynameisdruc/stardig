@@ -70,40 +70,63 @@ function sector() {
   };
 }
 
-/** a star's DJ sets (data/sets), drawn when they've arrived */
+/** a star's shelves: what's live, DJ sets and labels as rows of covers; ALL → opens one as a full list */
 const SETS_STEP = 30;
-/** how many of a star's sets are listed (SHOW MORE adds a step) */
+/** how many of a star's sets the full list shows (SHOW MORE adds a step) */
 const setsShown = new Map<number, number>();
-function djSets(si: number) {
+/** the shelf opened as a full list, if any */
+let opened: { si: number; what: "sets" | "labels" } | null = null;
+const SHELF = 12;
+/** the DJ, from a set's title: the part before the venue */
+const setHead = (t: string) => t.split(/\s*(?:\||@|\/\/|\s[-–—]\s|\sfor\s|\sat\s|\sin the lab|\slive\b)/i)[0] || t;
+const shelfHead = (title: string, n: number, what?: "sets" | "labels", red = false) =>
+  `<div class="ph-sub shelf-h${red ? " red" : ""}"><span>${title}</span>${what ? `<button type="button" class="out" data-all="${what}">ALL ${fmt(n)} →</button>` : `<span>${fmt(n)}</span>`}</div>`;
+
+function liveShelf(si: number) {
+  const live = state.live.get(si) ?? []; if (!live.length) return "";
+  return `<div>${shelfHead("● LIVE NOW", live.length, undefined, true)}<div class="list sets">${live.map((x, k) => `<button class="live-row" data-live="${k}" title="Tune in, in SET MODE"><span class="n">●</span><span class="t">${esc(x.t)}<small>${esc(x.c)}${x.viewers ? ` · ${fmt(x.viewers)} WATCHING` : ""}</small></span><span class="y">TUNE IN</span></button>`).join("")}</div></div>`;
+}
+
+function setsShelf(si: number) {
   const name = galaxy.stars[si].name, again = () => { if (state.sel?.kind === "star" && state.sel.s === si) renderDossier(); };
-  const live = state.live.get(si) ?? [];
-  const liveRows = live.map((x, k) => `<button class="live-row" data-live="${k}" title="Tune in, in SET MODE"><span class="n">●</span><span class="t">${esc(x.t)}<small>LIVE NOW · ${esc(x.c)}${x.viewers ? ` · ${fmt(x.viewers)} WATCHING` : ""}</small></span><span class="y">${hms(Math.max(0, (Date.now() - Date.parse(x.started)) / 1000 | 0))}</span></button>`).join("");
-  if (setCountsNow === null) { loadSetCounts().then((n) => { if (n[name]) again(); }); }
-  const n = setCountsNow?.[name] ?? 0;
-  if (!n && !live.length) return "";
-  const list = n ? setsNow.get(name) : []; if (n && !list) loadStarSets(name).then(again);
-  const shown = setsShown.get(si) ?? SETS_STEP;
-  return `<div><div class="ph-sub">DJ SETS · ${live.length ? `<b class="live-k">● ${live.length} LIVE</b>${n ? " · " : ""}` : ""}${n ? fmt(n) : ""}</div><div class="list sets">${liveRows}${list ? list.slice(0, shown).map((r, k) => { const m = onMap(r); return `<button data-set="${k}" title="Play in SET MODE"><span class="n">${pad(k + 1, 3)}</span><span class="t">${esc(r.t)}<small>${esc(r.c)} · ${r.y}${m ? ` · ${m} ON THE MAP` : ""}</small></span><span class="y">${hms(r.d)}</span></button>`; }).join("") : `<p class="note">LOADING…</p>`}</div>
-    ${list && list.length > shown ? `<button type="button" class="out more-sets" data-more-sets="${si}">SHOW ${Math.min(SETS_STEP, list.length - shown)} MORE · ${fmt(list.length - shown)} LEFT</button>` : ""}</div>`;
+  if (setCountsNow === null) { loadSetCounts().then((n) => { if (n[name]) again(); }); return ""; }
+  const n = setCountsNow[name] ?? 0; if (!n) return "";
+  const list = setsNow.get(name); if (!list) { loadStarSets(name).then(again); return `<div>${shelfHead("DJ SETS", n)}<p class="note">LOADING…</p></div>`; }
+  if (opened?.si === si && opened.what === "sets") {
+    const shown = setsShown.get(si) ?? SETS_STEP;
+    return `<div><div class="ph-sub shelf-h"><span>DJ SETS · ${fmt(list.length)}</span><button type="button" class="out" data-back="1">← BACK</button></div><div class="list sets">${list.slice(0, shown).map((r, k) => { const m = onMap(r); return `<button data-set="${k}" title="Play in SET MODE"><span class="n">${pad(k + 1, 3)}</span><span class="t">${esc(r.t)}<small>${esc(r.c)} · ${r.y}${m ? ` · ${m} ON THE MAP` : ""}</small></span><span class="y">${hms(r.d)}</span></button>`; }).join("")}</div>
+      ${list.length > shown ? `<button type="button" class="out more-sets" data-more-sets="${si}">SHOW ${Math.min(SETS_STEP, list.length - shown)} MORE · ${fmt(list.length - shown)} LEFT</button>` : ""}</div>`;
+  }
+  return `<div>${shelfHead("DJ SETS", list.length, "sets")}<div class="shelf">${list.slice(0, SHELF).map((r, k) => `<button class="shelf-i" data-set="${k}" title="${esc(r.t)}"><span class="cover"><img alt="" loading="lazy" referrerpolicy="no-referrer" src="https://i.ytimg.com/vi/${esc(r.v)}/mqdefault.jpg"><b>${hms(r.d)}</b></span><span class="nm">${esc(setHead(r.t))}</span><small>${esc(r.c)}${onMap(r) ? ` · ${onMap(r)} ON MAP` : ""}</small></button>`).join("")}</div></div>`;
+}
+
+function labelsShelf(si: number, pl: number[]) {
+  if (!pl.length) return "";
+  const g = galaxy;
+  if (opened?.si === si && opened.what === "labels")
+    return `<div><div class="ph-sub shelf-h"><span>LABELS · ${fmt(pl.length)}</span><button type="button" class="out" data-back="1">← BACK</button></div><div class="list">${pl.map((p, k) => `<button data-r="${R({ kind: "planet", p })}"><span class="n">${pad(k + 1, 3)}</span><span class="t">${esc(g.planets[p].name)}</span><span class="y">${fmt(g.planets[p].n)} REL</span></button>`).join("")}</div></div>`;
+  return `<div>${shelfHead("LABELS", pl.length, "labels")}<div class="shelf">${pl.slice(0, SHELF).map((p) => `<button class="shelf-i pl" data-r="${R({ kind: "planet", p })}"><canvas data-pl="${p}"></canvas><span class="nm">${esc(g.planets[p].name)}</span><small>${fmt(g.planets[p].n)} REL</small></button>`).join("")}</div></div>`;
 }
 
 function star(si: number) {
   const g = galaxy, s = g.stars[si], pl = g.planetsByStar[si], nb = g.neighbours(si), neb = g.nebulaOf(si);
+  if (opened && opened.si !== si) opened = null;
   dosAnim = (t) => { const c = heroCanvas(); if (!c) return; const f = fitted(c); drawPulsarHero(f.g, f.w, f.h, si, t); };
   return {
     code: `STAR // ST-${pad(si, 2)}`, title: s.name.toUpperCase(),
     html: `<div class="hero"><div class="frame" id="hero"><canvas></canvas></div>
-        <div class="ident"><span class="code">ST-${pad(si, 2)} // STYLE</span><h2 id="dosTitle"></h2><span class="stamp">${neb ? `${(s.tracks * 100 / Math.max(1, neb.tracks)).toFixed(1)}% OF ${esc(neb.name.toUpperCase())}` : `${(s.tracks * 100 / g.totalTracks).toFixed(1)}% OF SECTOR`}</span></div></div>
-      <div class="rows">${neb ? `<div class="row"><span>GALAXY</span><button class="link" data-neb="${g.nebulae.indexOf(neb)}">${esc(neb.name.toUpperCase())}</button></div>` : ""}${row("RELEASES", fmt(s.n))}${row("PLANETS / LABELS", fmt(pl.length))}${row("TRACKS", fmt(s.tracks))}${row("CLASS", `${g.sclass[si]} · ${g.starClassName(si)}`)}${row("LUMINOSITY", `${Math.round(g.recentShare[si] * 100)}% IN LAST 10 YRS`)}${row("TYPICAL TEMPO", tempoLabel(g.tempo[si]))}${row("PEAK YEAR", String(g.peakYear[si]))}${s.belts ? row("ASTEROID BELTS", s.belts.map(([a, b]) => `${a}–${b}`).join(" · ")) : ""}</div>
-      <details class="about"><summary>HOW TO READ A STAR</summary><p class="note">Size shows how many releases the style has; glow shows how alive it is today. The star pulses at the tempo typical for its style (styles without a steady beat just breathe slowly) and sheds a shell once every bar. Tempo is the usual range for the style, not measured from the tracks.</p></details>
-      ${s.yh?.length ? hist(s.yh, g.Y0, "ACTIVITY // RELEASES PER YEAR") : ""}
+        <div class="ident"><span class="code">ST-${pad(si, 2)} // ${neb ? esc(neb.name.toUpperCase()) : "STYLE"}</span><h2 id="dosTitle"></h2><span class="stamp">${tempoLabel(g.tempo[si])} · ${fmt(s.tracks)} TRACKS</span></div></div>
+      ${liveShelf(si)}
+      ${setsShelf(si)}
+      ${labelsShelf(si, pl)}
+      ${nb.length ? `<div><div class="ph-sub shelf-h"><span>NEIGHBOURS</span><span>${nb.length}</span></div><div class="chips">${nb.map((n) => `<button data-r="${R({ kind: "star", s: n.s })}" style="--c:${g.stars[n.s].color}">${esc(g.stars[n.s].name)} <i>${Math.round(n.w * 100)}%</i></button>`).join("")}</div></div>` : ""}
+      <details class="about star-about"><summary>ABOUT THE STAR</summary>
+        <div class="rows">${neb ? `<div class="row"><span>GALAXY</span><button class="link" data-neb="${g.nebulae.indexOf(neb)}">${esc(neb.name.toUpperCase())}</button></div>` : ""}${row("RELEASES", fmt(s.n))}${row("PLANETS / LABELS", fmt(pl.length))}${row("TRACKS", fmt(s.tracks))}${row("CLASS", `${g.sclass[si]} · ${g.starClassName(si)}`)}${row("LUMINOSITY", `${Math.round(g.recentShare[si] * 100)}% IN LAST 10 YRS`)}${row("TYPICAL TEMPO", tempoLabel(g.tempo[si]))}${row("PEAK YEAR", String(g.peakYear[si]))}${s.belts ? row("ASTEROID BELTS", s.belts.map(([a, b]) => `${a}–${b}`).join(" · ")) : ""}</div>
+        ${s.yh?.length ? hist(s.yh, g.Y0, "ACTIVITY // RELEASES PER YEAR") : ""}
+        <p class="note">Size shows how many releases the style has; glow shows how alive it is today. The star pulses at the tempo typical for its style (styles without a steady beat just breathe slowly) and sheds a shell once every bar. Tempo is the usual range for the style, not measured from the tracks.</p></details>
       ${!g.meta.sample && pl.length ? `<button class="play" data-system="${si}">▶ HITCHHIKE THE SYSTEM<small class="sub">a ride round ten of its labels, 42 tracks</small></button>` : ""}
       ${!g.meta.sample && beltSize(si) > 0 ? `<button class="plot crt dig" data-dig="${si}" title="Drill into a random asteroid: a track with no label at all — self-released, white labels, the unknown. Every new one you hear is ore."><span>⛏ DIG THE BELT · ${fmt(beltSize(si))} ROCKS</span><small class="sub">a random track with no label</small></button>` : ""}
-      ${pl.length ? `<button class="plot crt" data-route-star="${si}"><span>⟶ START THE ODYSSEY FROM HERE</span><small class="sub">a trip to another style, pick where</small></button>` : ""}
-      ${nb.length ? `<div class="bars"><div class="ph-sub">GRAVITATIONAL LINKS</div>${nb.map((n) => meter(g.stars[n.s].name.toUpperCase(), Math.min(1, n.w * 3), `${Math.round(n.w * 100)}%`, R({ kind: "star", s: n.s }), g.stars[n.s].color)).join("")}</div>` : ""}
-      ${djSets(si)}
-      <div><div class="ph-sub">PLANETS IN ORBIT</div><div class="list">${pl.slice(0, 40).map((p, k) => `<button data-r="${R({ kind: "planet", p })}"><span class="n">${pad(k + 1, 3)}</span><span class="t">${esc(g.planets[p].name)}</span><span class="y">${fmt(g.planets[p].n)} REL</span></button>`).join("")}</div>
-      ${pl.length > 40 ? `<div class="more">…and ${fmt(pl.length - 40)} more</div>` : ""}</div>`,
+      ${pl.length ? `<button class="plot crt" data-route-star="${si}"><span>⟶ START THE ODYSSEY FROM HERE</span><small class="sub">a trip to another style, pick where</small></button>` : ""}`,
   };
 }
 
@@ -194,6 +217,12 @@ export function renderDossier() {
   // all meters of a dossier share one label column, as wide as its longest label
   const labs = d.querySelectorAll<HTMLElement>(".bar-r > span:first-child");
   if (labs.length) { d.style.setProperty("--lbl", "max-content"); const w = Math.max(...[...labs].map((e) => e.scrollWidth)); d.style.setProperty("--lbl", w > 20 ? `${Math.min(w + 2, 170)}px` : ""); }
+  // the label shelf: each planet drawn once, still
+  d.querySelectorAll<HTMLCanvasElement>("canvas[data-pl]").forEach((c) => {
+    const f = fitCanvas(c), pi = +c.dataset.pl!;
+    f.g.fillStyle = BG; f.g.fillRect(0, 0, f.w, f.h);
+    drawPlanetBody(f.g, pi, f.w / 2, f.h / 2, Math.min(f.w, f.h) * 0.3, hash(galaxy.planets[pi].name) % 100);
+  });
   scramble($("dosId"), v.code); scramble(document.getElementById("dosTitle"), v.title);
   const img = d.querySelector<HTMLImageElement>(".thumb img");
   if (img) img.onerror = () => {
@@ -224,6 +253,9 @@ export function initDossier() {
     const nb = t.closest<HTMLElement>("[data-neb]"); if (nb) { flyToNebula(+nb.dataset.neb!); return; }
     const po = t.closest<HTMLElement>("[data-orbit]"); if (po) { playOrbit(+po.dataset.orbit!); return; }
     const sf = t.closest<HTMLElement>("[data-shuffle]"); if (sf) { reshuffle(+sf.dataset.shuffle!); renderDossier(); return; }
+    const al = t.closest<HTMLElement>("[data-all]");
+    if (al && state.sel?.kind === "star") { opened = { si: state.sel.s, what: al.dataset.all as "sets" | "labels" }; renderDossier(); return; }
+    if (t.closest("[data-back]")) { opened = null; renderDossier(); return; }
     const ms = t.closest<HTMLElement>("[data-more-sets]");
     if (ms) {
       const si = +ms.dataset.moreSets!, d = $("detail"), top = d.scrollTop;

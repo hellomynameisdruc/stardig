@@ -121,3 +121,25 @@ button.out { background: none; border: 0; border-bottom: 1px dotted var(--faint)
 .about summary::before { content: "? " }
 .about[open] summary { margin-bottom: 6px }
 .sat-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px }
+
+/* —— a star's shelves (LIVE NOW, DJ SETS, LABELS): rows of covers that scroll sideways; ALL → opens the full list */
+.shelf-h { display: flex; justify-content: space-between; align-items: center }
+.shelf-h .out { font-size: var(--fs-xs); padding: 1px 6px }
+.shelf-h.red { color: var(--red-ink) }
+.shelf { display: grid; grid-auto-flow: column; grid-auto-columns: 128px; gap: 8px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; padding-bottom: 6px; scrollbar-width: thin }
+.shelf-i { display: grid; gap: 2px; align-content: start; text-align: left; background: none; border: 0; padding: 0; color: var(--ink); cursor: var(--cur-hand, pointer); scroll-snap-align: start; min-width: 0 }
+.shelf-i .cover { position: relative; display: block; aspect-ratio: 16 / 9; background: var(--wash); border: 1px solid var(--faint); overflow: hidden }
+.shelf-i .cover img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(.7) contrast(1.05) }
+.shelf-i .cover b { position: absolute; right: 3px; bottom: 2px; font-weight: 400; font-size: var(--fs-xs); background: rgb(0 0 0 / .75); padding: 0 3px }
+.shelf-i .nm { font-size: var(--fs-s); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px }
+.shelf-i small { font-size: var(--fs-xs); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.shelf-i:hover .cover, .shelf-i:focus-visible .cover { border-color: var(--acc); box-shadow: 0 0 8px color-mix(in srgb, var(--acc) 45%, transparent) }
+.shelf-i:hover .nm { color: var(--acc) }
+.shelf-i.pl { grid-auto-columns: 96px; justify-items: center; text-align: center }
+.shelf-i.pl canvas { position: static; inset: auto; width: 96px; height: 72px; display: block; cursor: inherit; touch-action: auto }
+.shelf-i.pl .nm, .shelf-i.pl small { max-width: 100% }
+.chips { display: flex; flex-wrap: wrap; gap: 5px }
+.chips button { background: none; border: 1px solid color-mix(in srgb, var(--c, var(--ink)) 60%, transparent); color: var(--c, var(--ink)); font: inherit; font-size: var(--fs-s); padding: 2px 7px; cursor: var(--cur-hand, pointer) }
+.chips button i { font-style: normal; color: var(--dim) }
+.chips button:hover { background: color-mix(in srgb, var(--c, var(--ink)) 20%, transparent) }
+.star-about .rows { margin-top: 4px }
