@@ -25,6 +25,10 @@ export const ui = {
   locked: (_s: number) => {},
   /** a belt track heard for the first time: the pilot's ore count */
   oreFound: (_n: number) => {},
+  /** a DJ set is on air: ◂◂ ▸▸ jump along its tracklist (dir -1 / 1) */
+  setJump: (_dir: number) => {},
+  /** the set on air ended, or couldn't play (error code) */
+  setEnded: (_err?: number) => {},
   /** the player, for fleets that keep players in step */
   media: {
     ready: () => false,

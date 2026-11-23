@@ -17,6 +17,8 @@ import { provide } from "../app/ports";
 import { say } from "./rail";
 import { lockDossier } from "./beta";
 import { listPickerFor } from "./listPicker";
+import { loadSetCounts, loadStarSets, setCountsNow, setsNow } from "../data/sets";
+import { hms, onMap, playSet } from "./sets";
 
 let dosAnim: ((t: number) => void) | null = null;
 /** objects behind data-r buttons of the current render */
@@ -68,6 +70,17 @@ function sector() {
   };
 }
 
+/** a star's DJ sets (data/sets), drawn when they've arrived */
+const SETS_SHOWN = 30;
+function djSets(si: number) {
+  const name = galaxy.stars[si].name, again = () => { if (state.sel?.kind === "star" && state.sel.s === si) renderDossier(); };
+  if (setCountsNow === null) { loadSetCounts().then((n) => { if (n[name]) again(); }); return ""; }
+  const n = setCountsNow[name] ?? 0; if (!n) return "";
+  const list = setsNow.get(name); if (!list) loadStarSets(name).then(again);
+  return `<div><div class="ph-sub">DJ SETS · ${fmt(n)}</div><div class="list sets">${list ? list.slice(0, SETS_SHOWN).map((r, k) => { const m = onMap(r); return `<button data-set="${k}" title="Play in SET MODE"><span class="n">${pad(k + 1, 3)}</span><span class="t">${esc(r.t)}<small>${esc(r.c)} · ${r.y}${m ? ` · ${m} ON THE MAP` : ""}</small></span><span class="y">${hms(r.d)}</span></button>`; }).join("") : `<p class="note">LOADING…</p>`}</div>
+    ${list && list.length > SETS_SHOWN ? `<div class="more">…and ${fmt(list.length - SETS_SHOWN)} more</div>` : ""}</div>`;
+}
+
 function star(si: number) {
   const g = galaxy, s = g.stars[si], pl = g.planetsByStar[si], nb = g.neighbours(si), neb = g.nebulaOf(si);
   dosAnim = (t) => { const c = heroCanvas(); if (!c) return; const f = fitted(c); drawPulsarHero(f.g, f.w, f.h, si, t); };
@@ -82,6 +95,7 @@ function star(si: number) {
       ${!g.meta.sample && beltSize(si) > 0 ? `<button class="plot crt dig" data-dig="${si}" title="Drill into a random asteroid: a track with no label at all — self-released, white labels, the unknown. Every new one you hear is ore."><span>⛏ DIG THE BELT · ${fmt(beltSize(si))} ROCKS</span><small class="sub">a random track with no label</small></button>` : ""}
       ${pl.length ? `<button class="plot crt" data-route-star="${si}"><span>⟶ START THE ODYSSEY FROM HERE</span><small class="sub">a trip to another style, pick where</small></button>` : ""}
       ${nb.length ? `<div class="bars"><div class="ph-sub">GRAVITATIONAL LINKS</div>${nb.map((n) => meter(g.stars[n.s].name.toUpperCase(), Math.min(1, n.w * 3), `${Math.round(n.w * 100)}%`, R({ kind: "star", s: n.s }), g.stars[n.s].color)).join("")}</div>` : ""}
+      ${djSets(si)}
       <div><div class="ph-sub">PLANETS IN ORBIT</div><div class="list">${pl.slice(0, 40).map((p, k) => `<button data-r="${R({ kind: "planet", p })}"><span class="n">${pad(k + 1, 3)}</span><span class="t">${esc(g.planets[p].name)}</span><span class="y">${fmt(g.planets[p].n)} REL</span></button>`).join("")}</div>
       ${pl.length > 40 ? `<div class="more">…and ${fmt(pl.length - 40)} more</div>` : ""}</div>`,
   };
@@ -202,6 +216,8 @@ export function initDossier() {
     const nb = t.closest<HTMLElement>("[data-neb]"); if (nb) { flyToNebula(+nb.dataset.neb!); return; }
     const po = t.closest<HTMLElement>("[data-orbit]"); if (po) { playOrbit(+po.dataset.orbit!); return; }
     const sf = t.closest<HTMLElement>("[data-shuffle]"); if (sf) { reshuffle(+sf.dataset.shuffle!); renderDossier(); return; }
+    const st = t.closest<HTMLElement>("[data-set]");
+    if (st && state.sel?.kind === "star") { const nm = galaxy.stars[state.sel.s].name, r = setsNow.get(nm)?.[+st.dataset.set!]; if (r) playSet(r, nm); return; }
     const dg = t.closest<HTMLElement>("[data-dig]"); if (dg) { digBelt(+dg.dataset.dig!); return; }
     const ls = t.closest<HTMLElement>("[data-lists]"); if (ls) { if (state.sel?.kind === "track") listPickerFor(ls, state.sel); return; }
     if (t.closest("[data-like]")) { if (state.sel?.kind === "track") toggleBeacon(state.sel); return; }

@@ -113,6 +113,7 @@ export function nearestTracks(ref: TrackRef, k: number, skip?: Set<string>): Tra
 
 /** next along the route if one is playing, otherwise the nearest unheard track */
 export function next() {
+  if (state.set) { ui.setJump(1); return; }
   const np = state.nowPlaying, route = state.route; if (!np) return;
   if (route && state.routeIdx >= 0) {
     const cur = route.flat[state.routeIdx];
@@ -130,6 +131,7 @@ export function next() {
   const n = nearestTracks(np, 1, state.played)[0]; if (n) select({ kind: "track", ...n }, true, true);
 }
 export function prev() {
+  if (state.set) { ui.setJump(-1); return; }
   const h = state.history;
   if (h.length > 1) { h.pop(); const r = h.pop()!; select({ kind: "track", ...r }, true, true); }
 }

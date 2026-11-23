@@ -5,6 +5,7 @@ import { reduce } from "../core/dom";
 import { Galaxy } from "../model/galaxy";
 import { Motion } from "../model/orbits";
 import type { Route } from "../model/routes";
+import type { SetRec } from "../data/sets";
 import { loadMap, setDataVersion, TrackStore } from "../data/loader";
 import { browserKV } from "../store/storage";
 import { Beacons } from "../store/beacons";
@@ -57,6 +58,8 @@ export const state = {
   following: false,
   /** the other ships of the fleet, drawn round the track on air */
   fleetShips: [] as { nick: string; color: string }[],
+  /** a DJ set on air (instead of a track of the map): which, and from which star's list */
+  set: null as { rec: SetRec; star: string } | null,
   /** a dig under way: the asteroid being drilled and when it started (performance.now()) */
   dig: null as { s: number; i: number; t0: number } | null,
 };

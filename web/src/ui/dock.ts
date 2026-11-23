@@ -12,7 +12,7 @@ import { ticker } from "./ticker";
 import { say } from "./rail";
 import { reportDead } from "../cloud/deadShared";
 import { listPickerFor } from "./listPicker";
-import { provide } from "../app/ports";
+import { provide, ui } from "../app/ports";
 
 // Player keys use one family of pixel icons (14×14 grid), so they match in size and weight
 const svgI = (body: string) => `<svg class="ico" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges">${body}</svg>`;
@@ -77,8 +77,15 @@ export function paintOdysseyTag() {
   $("dockOdy").title = orbiting ? `Orbiting ${p!.name}: next plays another track of this label` : "";
 }
 
+/** a DJ set was on air (ui/sets.ts): the dock goes back to playing the map */
+function clearSet() {
+  if (!state.set) return;
+  state.set = null; dock.classList.remove("set", "setmode"); $("setTicks").innerHTML = "";
+}
+
 /** put a track on air */
 function loadInDock(ref: TrackRef) {
+  clearSet();
   const ch = chunk(ref.s)!;
   showDock();
   for (const id of ["playerBox", "dockPill"]) $(id).style.setProperty("--acc", galaxy.stars[ref.s].color);
@@ -124,7 +131,7 @@ function mediaKeys(title: string, artist: string, yt: string) {
 
 /** plays a single video through the transport (test hook #test-<id>) */
 export function playTestSignal(id: string) {
-  showDock(); $("npTitle").textContent = "TEST SIGNAL"; $("npArtist").textContent = id;
+  clearSet(); showDock(); $("npTitle").textContent = "TEST SIGNAL"; $("npArtist").textContent = id;
   player.play(id);
 }
 
@@ -141,8 +148,9 @@ export function initDock() {
   $("pPrev").innerHTML = ICON.prev; $("pNext").innerHTML = ICON.next; $("pToggle").innerHTML = ICON.pause; $("pLike").innerHTML = ICON.beacon; $("pList").innerHTML = ICON.list; $("dockCast").innerHTML = ICON.cast; $("pShare").innerHTML = ICON.share;
 
   player = new Player("yt", {
-    onEnded: () => { if (!state.following && $<HTMLInputElement>("autopilot").checked) next(); },
+    onEnded: () => { if (state.set) { ui.setEnded(); return; } if (!state.following && $<HTMLInputElement>("autopilot").checked) next(); },
     onError: (code) => {
+      if (state.set) { ui.setEnded(code); return; }
       // removed, private (100) or not allowed on other sites (101, 150): that signal is dead for good,
       // so remember it and never steer here again. Other errors may pass, so those are only skipped.
       const gone = code === 100 || code === 101 || code === 150, np = state.nowPlaying, ch = np && chunk(np.s);

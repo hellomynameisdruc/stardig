@@ -1,0 +1,27 @@
+{
+  "about": "YouTube channels that publish DJ sets, for build_sets.py. handle: the channel's @name (if wrong, the name is searched for instead and the log says what was found). limit: newest uploads read.",
+  "channels": [
+    {"name": "Boiler Room", "handle": "@boilerroom"},
+    {"name": "HÖR BERLIN", "handle": "@HOR.BERLIN"},
+    {"name": "Cercle", "handle": "@Cercle"},
+    {"name": "Mixmag", "handle": "@Mixmag"},
+    {"name": "Keep Hush", "handle": "@KeepHush"},
+    {"name": "Dekmantel", "handle": "@Dekmantel"},
+    {"name": "The Lot Radio", "handle": "@TheLotRadio"},
+    {"name": "Kiosk Radio", "handle": "@KioskRadio"},
+    {"name": "Awakenings", "handle": "@Awakenings"},
+    {"name": "Resident Advisor", "handle": "@ResidentAdvisor"},
+    {"name": "DJ Mag", "handle": "@DJMagOfficial"},
+    {"name": "Defected Records", "handle": "@DefectedRecords"},
+    {"name": "Glitterbox", "handle": "@GlitterboxIbiza"},
+    {"name": "Anjunadeep", "handle": "@Anjunadeep"},
+    {"name": "Anjunabeats", "handle": "@Anjunabeats"},
+    {"name": "A State Of Trance", "handle": "@AStateOfTrance"},
+    {"name": "UKF", "handle": "@UKF"},
+    {"name": "Hospital Records", "handle": "@HospitalRecords"},
+    {"name": "Let It Roll", "handle": "@LetItRollFestival"},
+    {"name": "Q-dance", "handle": "@Qdance"},
+    {"name": "Verknipt", "handle": "@Verknipt"},
+    {"name": "Drumcode", "handle": "@Drumcode"}
+  ]
+}

@@ -1,0 +1,47 @@
+# DJ sets for the star systems: once a day, the channels in pipeline/set_channels.json are read through
+# the YouTube Data API, their long videos are placed in styles (pipeline/build_sets.py) and written to the
+# `sets` branch; then the site is redeployed with them. "Run workflow" runs it now.
+# Needs the repository secret YT_API_KEY: an API key restricted to the YouTube Data API v3.
+name: DJ sets
+
+on:
+  schedule:
+    - cron: "37 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: sets
+
+jobs:
+  sets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: The map (data branch)
+        run: |
+          git fetch --depth 1 origin data
+          mkdir -p /tmp/map && git archive FETCH_HEAD map.json tracks titles | tar -x -C /tmp/map
+      - name: Build the sets
+        env:
+          YT_API_KEY: ${{ secrets.YT_API_KEY }}
+        run: |
+          test -n "$YT_API_KEY" || { echo "::error::Add the repository secret YT_API_KEY"; exit 1; }
+          python pipeline/build_sets.py /tmp/map /tmp/sets | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Publish to the sets branch
+        run: |
+          cd /tmp/sets
+          git init -q -b sets && git add -A
+          git -c user.name="stardig" -c user.email="actions@users.noreply.github.com" commit -qm "DJ sets $(date -u +%F)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" sets
+      - name: Redeploy the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main

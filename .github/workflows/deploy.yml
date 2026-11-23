@@ -72,6 +72,13 @@ jobs:
             echo "No real data yet — deploying the test map."
           fi
 
+      - name: DJ sets per star system (the sets branch, rebuilt daily by sets.yml)
+        run: |
+          if git fetch --depth 1 origin sets 2>/dev/null; then
+            mkdir -p web/public/data/sets && git archive FETCH_HEAD | tar -x -C web/public/data/sets
+            echo "Sets: $(du -sh web/public/data/sets | cut -f1)"
+          fi
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20

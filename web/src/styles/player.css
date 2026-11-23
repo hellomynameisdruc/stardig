@@ -102,3 +102,47 @@
 }
 :root.still .dock-ody, :root.still #dockCast.on { animation: none }
 
+
+/* —— DJ sets (ui/sets.ts). The SET MODE key shows only while a set is on air; the tracklist pane only in SET MODE */
+#dockBig { display: none }
+.dock.set #dockBig { display: inline-flex }
+.dock.set .np-acts, .dock.set #dockFind, .dock.set .tog { display: none }
+.seek { position: relative }
+.seek > #seek { grid-column: 2; grid-row: 1 } .seek > #tDur { grid-column: 3; grid-row: 1 }
+.set-ticks { grid-column: 2; grid-row: 1; position: relative; height: 9px; pointer-events: none; align-self: center }
+.set-ticks i { position: absolute; top: 0; width: 1px; height: 9px; background: var(--acc); opacity: .75 }
+.set-pane { display: none }
+.dock.setmode { left: 14px !important; top: 14px !important; right: 14px !important; bottom: 14px !important; width: auto; z-index: var(--z-over-overlay);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 34%); grid-template-rows: auto minmax(200px, 1fr) auto auto auto; column-gap: 14px;
+  grid-template-areas: "head head" "video pane" "np pane" "seek pane" "pbar pane"; padding-bottom: 10px; background: var(--bg) }
+.dock.setmode .dock-head { grid-area: head; cursor: default }
+.dock.setmode .video { grid-area: video; width: 100%; height: 100%; min-height: 200px }
+.dock.setmode .dock-np { grid-area: np } .dock.setmode .seek { grid-area: seek } .dock.setmode .pbar { grid-area: pbar }
+.dock.setmode .pbar { grid-template-columns: auto minmax(0, 240px); justify-content: space-between; align-items: center }
+.dock.setmode .pbar .tx { grid-template-columns: repeat(3, 72px) }
+.dock.setmode .set-pane { grid-area: pane; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--faint); padding-left: 12px }
+.set-head { display: grid; gap: 3px; padding-bottom: 8px }
+.set-t { font-family: var(--f-dot); color: var(--acc); font-size: var(--fs-l); text-shadow: var(--acc-glow) }
+.set-m { color: var(--dim); font-size: var(--fs-s) }
+.set-head .out { justify-self: start; margin-top: 4px }
+.set-tl { list-style: none; margin: 0; padding: 0; overflow-y: auto; min-height: 0; flex: 1 }
+.set-tl li { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 4px 2px; border-bottom: 1px dotted var(--faint); font-size: var(--fs-s) }
+.set-tl .tc { background: none; border: 0; padding: 0; text-align: left; color: var(--dim); font: inherit; font-size: var(--fs-xs); cursor: var(--cur-hand, pointer) }
+button.tc:hover { color: var(--acc) }
+.set-tl .tt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.set-tl .tt.id { color: var(--dim) }
+.set-tl .go { background: none; border: 1px solid transparent; color: var(--acc); font: inherit; font-size: var(--fs-xs); letter-spacing: .06em; padding: 1px 4px; cursor: var(--cur-hand, pointer); white-space: nowrap }
+.set-tl .go:hover { border-color: var(--acc) }
+.set-tl .go .ico { width: 12px; height: 12px }
+.set-tl li.now { background: color-mix(in srgb, var(--acc) 16%, transparent) }
+.set-tl li.now .tc { color: var(--acc) }
+.list.sets small { display: block; color: var(--dim); font-size: var(--fs-xs); margin-top: 2px }
+.list.sets button:hover small { color: var(--inv-ink) }
+@media (max-width: 860px) {
+  .dock.setmode { top: 0 !important; bottom: 0 !important; left: 0 !important; right: 0 !important; border-width: 0; overflow-y: auto;
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto auto auto minmax(0, 1fr); grid-template-areas: "head" "video" "np" "seek" "pbar" "pane" }
+  .dock.setmode .video { height: auto; aspect-ratio: 16 / 9 }
+  .dock.setmode .dock-np { display: grid } .dock.setmode .np-txt { display: contents }
+  .dock.setmode .set-pane { border-left: 0; padding: 10px 0 0; border-top: 1px solid var(--faint); margin-top: 8px }
+  .dock.setmode .pbar { grid-template-columns: 1fr }
+}
