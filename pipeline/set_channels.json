@@ -2,6 +2,9 @@
   "about": "YouTube channels that publish DJ sets, for build_sets.py; the live check (supabase/functions/live-sets) watches all of them. handle: the channel's @name (empty or wrong: the name is searched for once, and the log says what was found). style: where its live streams go when the DJ isn't known.",
   "channels": [
     {
+      "name": "20ft Radio"
+    },
+    {
       "name": "Boiler Room",
       "handle": "@boilerroom"
     },
