@@ -5,7 +5,9 @@ from the description and matched to tracks on the map.
     YT_API_KEY=… python pipeline/build_sets.py <map data dir> <out dir>
 
 Reads the published map (map.json, tracks/, titles/) and writes into <out dir>:
-  index.json         {"built": date, "n": {star name: sets}, "channels": {name: channel id}}
+  index.json         {"built": date, "n": {star name: sets}, "channels": {name: channel id}, "style": {name: star}}
+  djs.json           for placing live streams (supabase/functions/live-sets): {"stars": [names],
+                     "a": {artist: [[star, weight], …]}} for artists with 3+ tracks on the map
   s/<slug>.json      a star's sets, most watched first:
                      [{"v": video id, "t": title, "c": channel, "d": seconds, "y": year, "w": views,
                        "tl": [[seconds or -1, "Artist — Title", yt or "", star name or ""], …]}, …]
@@ -260,7 +262,14 @@ def build(data: Path, out: Path):
         recs = recs[:PER_STAR]
         counts[idx.stars[si]] = len(recs)
         json.dump(recs, open(out / "s" / f"{slug(idx.stars[si])}.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
-    json.dump({"built": date.today().isoformat(), "n": counts, "channels": found}, open(out / "index.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    style = {ch["name"]: ch["style"] for ch in cfg["channels"] if ch.get("style") and ch["name"] in found}
+    json.dump({"built": date.today().isoformat(), "n": counts, "channels": found, "style": style}, open(out / "index.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    djs = {}
+    for a, c in idx.artist.items():
+        tot = sum(c.values())
+        if tot >= 3:
+            djs[a] = [[si, round(4.0 * n / tot * min(1.0, tot / 5), 2)] for si, n in c.most_common(2) if n / tot >= 0.25]
+    json.dump({"stars": idx.stars, "a": djs}, open(out / "djs.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     print(f"{sum(counts.values())} sets in {len(counts)} stars")
 
 

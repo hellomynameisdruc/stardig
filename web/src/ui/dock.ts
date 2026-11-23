@@ -80,7 +80,7 @@ export function paintOdysseyTag() {
 /** a DJ set was on air (ui/sets.ts): the dock goes back to playing the map */
 function clearSet() {
   if (!state.set) return;
-  state.set = null; dock.classList.remove("set", "setmode"); $("setTicks").innerHTML = "";
+  state.set = null; dock.classList.remove("set", "setmode", "live-set"); $("setTicks").innerHTML = "";
 }
 
 /** put a track on air */

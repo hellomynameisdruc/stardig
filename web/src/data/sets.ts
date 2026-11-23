@@ -3,7 +3,10 @@
 
 /** one set: video id, title, channel, seconds, year, views, and its tracklist as read from the
  *  description: [seconds or -1, "Artist — Title", the track's YouTube id on the map or "", its star or ""] */
-export type SetRec = { v: string; t: string; c: string; d: number; y: number; w: number; tl: [number, string, string, string][] };
+export type SetRec = { v: string; t: string; c: string; d: number; y: number; w: number; tl: [number, string, string, string][]; live?: boolean };
+
+/** a stream on air now (the table live_sets, cloud/live.ts) */
+export type LiveRec = { v: string; t: string; c: string; stars: string[]; viewers: number; started: string };
 
 /** a star's name as a file name, as the pipeline writes it (slug in build_sets.py) */
 export const setSlug = (name: string) =>

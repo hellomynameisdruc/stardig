@@ -74,10 +74,13 @@ function sector() {
 const SETS_SHOWN = 30;
 function djSets(si: number) {
   const name = galaxy.stars[si].name, again = () => { if (state.sel?.kind === "star" && state.sel.s === si) renderDossier(); };
-  if (setCountsNow === null) { loadSetCounts().then((n) => { if (n[name]) again(); }); return ""; }
-  const n = setCountsNow[name] ?? 0; if (!n) return "";
-  const list = setsNow.get(name); if (!list) loadStarSets(name).then(again);
-  return `<div><div class="ph-sub">DJ SETS · ${fmt(n)}</div><div class="list sets">${list ? list.slice(0, SETS_SHOWN).map((r, k) => { const m = onMap(r); return `<button data-set="${k}" title="Play in SET MODE"><span class="n">${pad(k + 1, 3)}</span><span class="t">${esc(r.t)}<small>${esc(r.c)} · ${r.y}${m ? ` · ${m} ON THE MAP` : ""}</small></span><span class="y">${hms(r.d)}</span></button>`; }).join("") : `<p class="note">LOADING…</p>`}</div>
+  const live = state.live.get(si) ?? [];
+  const liveRows = live.map((x, k) => `<button class="live-row" data-live="${k}" title="Tune in, in SET MODE"><span class="n">●</span><span class="t">${esc(x.t)}<small>LIVE NOW · ${esc(x.c)}${x.viewers ? ` · ${fmt(x.viewers)} WATCHING` : ""}</small></span><span class="y">${hms(Math.max(0, (Date.now() - Date.parse(x.started)) / 1000 | 0))}</span></button>`).join("");
+  if (setCountsNow === null) { loadSetCounts().then((n) => { if (n[name]) again(); }); }
+  const n = setCountsNow?.[name] ?? 0;
+  if (!n && !live.length) return "";
+  const list = n ? setsNow.get(name) : []; if (n && !list) loadStarSets(name).then(again);
+  return `<div><div class="ph-sub">DJ SETS · ${live.length ? `<b class="live-k">● ${live.length} LIVE</b>${n ? " · " : ""}` : ""}${n ? fmt(n) : ""}</div><div class="list sets">${liveRows}${list ? list.slice(0, SETS_SHOWN).map((r, k) => { const m = onMap(r); return `<button data-set="${k}" title="Play in SET MODE"><span class="n">${pad(k + 1, 3)}</span><span class="t">${esc(r.t)}<small>${esc(r.c)} · ${r.y}${m ? ` · ${m} ON THE MAP` : ""}</small></span><span class="y">${hms(r.d)}</span></button>`; }).join("") : `<p class="note">LOADING…</p>`}</div>
     ${list && list.length > SETS_SHOWN ? `<div class="more">…and ${fmt(list.length - SETS_SHOWN)} more</div>` : ""}</div>`;
 }
 
@@ -206,6 +209,8 @@ export function paintDossierBeacon() {
 export function initDossier() {
   provide({
     showSelection: (ms) => { renderDossier(); if (ms) decodeDossier(ms); },
+    // a star on screen whose streams changed: its DJ SETS again
+    liveChanged: () => { if (state.sel?.kind === "star" && (state.live.has(state.sel.s) || document.querySelector(".dossier .live-row"))) renderDossier(); },
     oreFound: (n) => { say(`ORE MINED · ${n} ${n === 1 ? "ROCK" : "ROCKS"} DUG UP SO FAR`); renderDossier(); },
   });
   const click = (e: Event) => {
@@ -216,6 +221,12 @@ export function initDossier() {
     const nb = t.closest<HTMLElement>("[data-neb]"); if (nb) { flyToNebula(+nb.dataset.neb!); return; }
     const po = t.closest<HTMLElement>("[data-orbit]"); if (po) { playOrbit(+po.dataset.orbit!); return; }
     const sf = t.closest<HTMLElement>("[data-shuffle]"); if (sf) { reshuffle(+sf.dataset.shuffle!); renderDossier(); return; }
+    const lv = t.closest<HTMLElement>("[data-live]");
+    if (lv && state.sel?.kind === "star") {
+      const nm = galaxy.stars[state.sel.s].name, x = state.live.get(state.sel.s)?.[+lv.dataset.live!];
+      if (x) playSet({ v: x.v, t: x.t, c: x.c, d: 0, y: new Date(x.started).getFullYear(), w: x.viewers, tl: [], live: true }, nm);
+      return;
+    }
     const st = t.closest<HTMLElement>("[data-set]");
     if (st && state.sel?.kind === "star") { const nm = galaxy.stars[state.sel.s].name, r = setsNow.get(nm)?.[+st.dataset.set!]; if (r) playSet(r, nm); return; }
     const dg = t.closest<HTMLElement>("[data-dig]"); if (dg) { digBelt(+dg.dataset.dig!); return; }

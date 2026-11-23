@@ -29,6 +29,8 @@ export const ui = {
   setJump: (_dir: number) => {},
   /** the set on air ended, or couldn't play (error code) */
   setEnded: (_err?: number) => {},
+  /** which stars have a set streaming changed */
+  liveChanged: () => {},
   /** the player, for fleets that keep players in step */
   media: {
     ready: () => false,

@@ -26,20 +26,20 @@ export function playSet(rec: SetRec, star: string) {
   if (si >= 0 && !starOpen(si)) { ui.locked(si); return; } // closed beta: sets keep to the open galaxy too
   playTestSignal(rec.v);
   state.set = { rec, star }; state.nowPlaying = null; state.orbit = null; state.dirty = true;
-  $("npTitle").textContent = rec.t; $("npArtist").textContent = `SET · ${rec.c} · ${rec.y}`;
+  $("npTitle").textContent = rec.t; $("npArtist").textContent = rec.live ? `● LIVE · ${rec.c}` : `SET · ${rec.c} · ${rec.y}`;
   if (si >= 0) for (const id of ["playerBox", "dockPill"]) $(id).style.setProperty("--acc", galaxy.stars[si].color);
-  dockEl().classList.add("set", "setmode");
+  dockEl().classList.add("set", "setmode"); dockEl().classList.toggle("live-set", !!rec.live);
   cur = -1; paintPane(); paintTicks();
 }
 
 function paintPane() {
   const s = state.set; if (!s) return;
   const r = s.rec, n = onMap(r);
-  $("setPane").innerHTML = `<div class="set-head"><div class="set-t">${esc(r.t)}</div><div class="set-m">${esc(r.c)} · ${r.y} · ${hms(r.d)}${r.tl.length ? ` · ${n} of ${r.tl.length} on the map` : ""}</div>
+  $("setPane").innerHTML = `<div class="set-head"><div class="set-t">${esc(r.t)}</div><div class="set-m">${r.live ? `<b class="live-k">● LIVE NOW</b> · ${esc(r.c)}${r.w ? ` · ${r.w.toLocaleString("en")} watching` : ""}` : `${esc(r.c)} · ${r.y} · ${hms(r.d)}`}${r.tl.length ? ` · ${n} of ${r.tl.length} on the map` : ""}</div>
     <a class="out" href="https://www.youtube.com/watch?v=${esc(r.v)}" target="_blank" rel="noopener">OPEN ON YOUTUBE ↗</a></div>
     <div class="ph-sub">TRACKLIST${r.tl.length ? ` · ${r.tl.length}` : ""}</div>
     ${r.tl.length ? `<ol class="set-tl">${r.tl.map(([sec, text, yt], k) => `<li data-k="${k}">${sec >= 0 ? `<button type="button" class="tc" data-seek="${k}" title="Play the set from here">${hms(sec)}</button>` : `<span class="tc">${String(k + 1).padStart(2, "0")}</span>`}<span class="tt${/^id\b/i.test(text) ? " id" : ""}">${esc(text)}</span>${yt ? `<button type="button" class="go" data-fly="${k}" title="Fly to this track on the map (the set plays on)">→ PLANET</button><button type="button" class="go like-k" data-like="${k}" title="Beacon this track">${ICON.beacon}</button>` : ""}</li>`).join("")}</ol>`
-      : `<p class="note">No tracklist in this set's description.</p>`}`;
+      : `<p class="note">${r.live ? "A live stream: no tracklist. Whatever plays, it plays now." : "No tracklist in this set's description."}</p>`}`;
   paintLikes();
 }
 function paintTicks() {
@@ -106,6 +106,6 @@ export function initSets() {
     pane.querySelectorAll(".now").forEach((el) => el.classList.remove("now"));
     const li = k >= 0 ? pane.querySelector<HTMLElement>(`li[data-k="${k}"]`) : null;
     if (li) { li.classList.add("now"); if (dockEl().classList.contains("setmode")) li.scrollIntoView({ block: "nearest" }); }
-    $("npArtist").textContent = k >= 0 ? `NOW · ${s.rec.tl[k][1]}` : `SET · ${s.rec.c} · ${s.rec.y}`;
+    if (!s.rec.live) $("npArtist").textContent = k >= 0 ? `NOW · ${s.rec.tl[k][1]}` : `SET · ${s.rec.c} · ${s.rec.y}`;
   }, 500);
 }

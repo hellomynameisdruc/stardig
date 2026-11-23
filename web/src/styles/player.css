@@ -146,3 +146,8 @@ button.tc:hover { color: var(--acc) }
   .dock.setmode .set-pane { border-left: 0; padding: 10px 0 0; border-top: 1px solid var(--faint); margin-top: 8px }
   .dock.setmode .pbar { grid-template-columns: 1fr }
 }
+/* LIVE: a stream has no end to seek to */
+.dock.live-set .seek { visibility: hidden }
+.live-k { color: var(--red-ink); font-weight: 400; text-shadow: var(--red-glow) }
+.list.sets .live-row .n, .list.sets .live-row small { color: var(--red-ink) }
+.list.sets .live-row:hover { background: var(--red) }

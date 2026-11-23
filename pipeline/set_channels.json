@@ -1,27 +1,106 @@
 {
-  "about": "YouTube channels that publish DJ sets, for build_sets.py. handle: the channel's @name (if wrong, the name is searched for instead and the log says what was found). limit: newest uploads read.",
+  "about": "YouTube channels that publish DJ sets, for build_sets.py (and live streams, supabase/functions/live-sets). handle: the channel's @name (empty or wrong: the name is searched for and the log says what was found). style: where its live streams go when the DJ isn't known. limit: newest uploads read.",
   "channels": [
-    {"name": "Boiler Room", "handle": "@boilerroom"},
-    {"name": "HÖR BERLIN", "handle": "@HOR.BERLIN"},
-    {"name": "Cercle", "handle": "@Cercle"},
-    {"name": "Mixmag", "handle": "@Mixmag"},
-    {"name": "Keep Hush", "handle": "@KeepHush"},
-    {"name": "Dekmantel", "handle": "@Dekmantel"},
-    {"name": "The Lot Radio", "handle": "@TheLotRadio"},
-    {"name": "Kiosk Radio", "handle": "@KioskRadio"},
-    {"name": "Awakenings", "handle": "@Awakenings"},
-    {"name": "Resident Advisor", "handle": "@ResidentAdvisor"},
-    {"name": "DJ Mag", "handle": "@DJMagOfficial"},
-    {"name": "Defected Records", "handle": "@DefectedRecords"},
-    {"name": "Glitterbox", "handle": "@GlitterboxIbiza"},
-    {"name": "Anjunadeep", "handle": "@Anjunadeep"},
-    {"name": "Anjunabeats", "handle": "@Anjunabeats"},
-    {"name": "A State Of Trance", "handle": "@AStateOfTrance"},
-    {"name": "UKF", "handle": "@UKF"},
-    {"name": "Hospital Records", "handle": "@HospitalRecords"},
-    {"name": "Let It Roll", "handle": "@LetItRollFestival"},
-    {"name": "Q-dance", "handle": "@Qdance"},
-    {"name": "Verknipt", "handle": "@Verknipt"},
-    {"name": "Drumcode", "handle": "@Drumcode"}
+    {
+      "name": "Boiler Room",
+      "handle": "@boilerroom"
+    },
+    {
+      "name": "HÖR BERLIN",
+      "handle": "@HOR.BERLIN",
+      "style": "Techno"
+    },
+    {
+      "name": "Cercle",
+      "handle": "@Cercle"
+    },
+    {
+      "name": "Mixmag",
+      "handle": "@Mixmag"
+    },
+    {
+      "name": "Keep Hush",
+      "handle": "@KeepHush"
+    },
+    {
+      "name": "Dekmantel",
+      "handle": "@Dekmantel"
+    },
+    {
+      "name": "The Lot Radio",
+      "handle": "@TheLotRadio"
+    },
+    {
+      "name": "Kiosk Radio",
+      "handle": "@KioskRadio"
+    },
+    {
+      "name": "Awakenings Festival",
+      "handle": "",
+      "style": "Techno"
+    },
+    {
+      "name": "Resident Advisor",
+      "handle": "@ResidentAdvisor"
+    },
+    {
+      "name": "DJ Mag",
+      "handle": ""
+    },
+    {
+      "name": "Defected Records",
+      "handle": "@DefectedRecords",
+      "style": "House"
+    },
+    {
+      "name": "Glitterbox",
+      "handle": "@GlitterboxIbiza",
+      "style": "Disco"
+    },
+    {
+      "name": "Anjunadeep",
+      "handle": "@Anjunadeep",
+      "style": "Deep House"
+    },
+    {
+      "name": "Anjunabeats",
+      "handle": "@Anjunabeats",
+      "style": "Trance"
+    },
+    {
+      "name": "A State Of Trance",
+      "handle": "@AStateOfTrance",
+      "style": "Trance"
+    },
+    {
+      "name": "UKF",
+      "handle": "@UKF",
+      "style": "Drum n Bass"
+    },
+    {
+      "name": "Hospital Records",
+      "handle": "@HospitalRecords",
+      "style": "Drum n Bass"
+    },
+    {
+      "name": "Let It Roll",
+      "handle": "@LetItRollFestival",
+      "style": "Drum n Bass"
+    },
+    {
+      "name": "Q-dance",
+      "handle": "@Qdance",
+      "style": "Hardstyle"
+    },
+    {
+      "name": "Verknipt Events",
+      "handle": "",
+      "style": "Hard Techno"
+    },
+    {
+      "name": "Drumcode",
+      "handle": "",
+      "style": "Techno"
+    }
   ]
 }

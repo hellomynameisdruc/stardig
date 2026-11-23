@@ -13,6 +13,7 @@ import { drawSatellites } from "./satellites";
 import { drawStation } from "./station";
 import { drawRoute } from "./routeLine";
 import { drawMarker } from "./markers";
+import { drawLiveStars } from "./live";
 import { drawBelt, drawDig } from "./asteroids";
 import { drawNames, drawStatic, farView, painted, readout } from "./staticLayer";
 
@@ -104,6 +105,7 @@ function drawLive(t: number) {
     const p = cam.toScreen(s.x, s.y);
     drawPulsar(ctx, si, p.x, p.y, starSize(si), t);
   });
+  drawLiveStars(ctx, t);
   const np = state.nowPlaying;
   if (np && chunk(np.s)) {
     const q = motion.trackPos(np.s, np.i, t), p = cam.toScreen(q.x, q.y), { bar } = pulseOf(np.s, t);

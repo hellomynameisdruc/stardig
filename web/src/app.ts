@@ -23,6 +23,7 @@ import { initBriefing } from "./ui/briefing";
 import { initCoach } from "./ui/coach";
 import { loadSharedDead } from "./cloud/deadShared";
 import { initSets } from "./ui/sets";
+import { initLive } from "./cloud/live";
 import { initPilot } from "./ui/pilot";
 import { initBeta } from "./ui/beta";
 import { initModals } from "./ui/modal";
@@ -42,6 +43,7 @@ if (reduce && systemStill) setMode("motion", "<b>MOTION OFF</b> · YOUR SYSTEM A
 initScene();
 initDock();
 initSets();
+initLive();
 loadSharedDead();
 initDossier();
 initRoutePanel();
