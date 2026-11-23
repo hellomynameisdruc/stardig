@@ -150,3 +150,8 @@ button.out { background: none; border: 0; border-bottom: 1px dotted var(--faint)
 .chips button i { font-style: normal; color: var(--dim) }
 .chips button:hover { background: color-mix(in srgb, var(--c, var(--ink)) 20%, transparent) }
 .star-about .rows { margin-top: 4px }
+.shelf-i.now .cover { border-color: var(--acc); box-shadow: 0 0 10px color-mix(in srgb, var(--acc) 60%, transparent) }
+.shelf-i.now .nm { color: var(--acc) }
+.chips.trail { margin-top: -2px }
+.chip-s { font-size: var(--fs-s); color: var(--dim); border: 1px dashed var(--faint); padding: 2px 7px }
+.ident .code .link { font: inherit; letter-spacing: inherit }

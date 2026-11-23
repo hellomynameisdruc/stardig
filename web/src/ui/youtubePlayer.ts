@@ -33,14 +33,15 @@ export class Player {
 
   constructor(private mountId: string, private ev: PlayerEvents) {}
 
-  async play(videoId: string) {
+  /** start: seconds into the video (a DJ set from a line of its tracklist) */
+  async play(videoId: string, start = 0) {
     await loadApi();
     if (!this.yt) {
       this.pending = videoId;
       this.yt = new window.YT.Player(this.mountId, {
         width: "100%", height: "100%", videoId,
         // controls: 0 — the terminal has its own transport; the video itself stays visible
-        playerVars: { autoplay: 1, playsinline: 1, rel: 0, controls: 0, iv_load_policy: 3, modestbranding: 1 },
+        playerVars: { autoplay: 1, start: Math.floor(start), playsinline: 1, rel: 0, controls: 0, iv_load_policy: 3, modestbranding: 1 },
         events: {
           onReady: (e: any) => { e.target.setVolume(this.volume); if (this.pending && this.pending !== videoId) e.target.loadVideoById(this.pending); e.target.playVideo(); },
           onStateChange: (e: any) => {
@@ -58,7 +59,7 @@ export class Player {
       return;
     }
     this.pending = videoId;
-    if (this.yt.loadVideoById) this.yt.loadVideoById(videoId);
+    if (this.yt.loadVideoById) this.yt.loadVideoById(start ? { videoId, startSeconds: start } : videoId);
   }
 
   get ready() { return !!this.yt?.getCurrentTime; }

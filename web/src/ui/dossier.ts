@@ -17,7 +17,7 @@ import { provide } from "../app/ports";
 import { say } from "./rail";
 import { lockDossier } from "./beta";
 import { listPickerFor } from "./listPicker";
-import { loadSetCounts, loadStarSets, setCountsNow, setsNow } from "../data/sets";
+import { loadSetCounts, loadStarSets, setCountsNow, setsNow, type SetRec } from "../data/sets";
 import { hms, onMap, playSet } from "./sets";
 
 let dosAnim: ((t: number) => void) | null = null;
@@ -137,16 +137,41 @@ function planetType(pi: number) {
   return `${tn[0]}${tn.slice(1).toLowerCase()}: ${td}${ty === "giant" && g.ringed[pi] ? `, with rings: ${PTYPE_INFO.ringed[1]}` : ""}.`;
 }
 
+/** a track as a cover on a shelf: its YouTube preview in the tube's look, the title, the artist and year */
+const trackCover = (s: number, i: number) => {
+  const ch = chunk(s)!;
+  return `<button class="shelf-i${isNowPlaying(s, i) ? " now" : ""}" data-r="${R({ kind: "track", s, i })}" title="${esc(ch.an[ch.a[i]])} — ${esc(ch.t[i])}"><span class="cover"><img alt="" loading="lazy" referrerpolicy="no-referrer" src="https://i.ytimg.com/vi/${esc(ch.yt[i])}/default.jpg">${ch.yr[i] ? `<b>${ch.yr[i]}</b>` : ""}</span><span class="nm">${esc(ch.t[i])}</span><small>${esc(ch.an[ch.a[i]])}</small></button>`;
+};
+/** the star's DJ sets that play any of these tracks: [set, the line, its index in the star's list] */
+function setsWith(si: number, yts: Set<string>, again: () => void) {
+  const name = galaxy.stars[si].name;
+  if (setCountsNow === null) { loadSetCounts().then((n) => { if (n[name]) again(); }); return []; }
+  if (!setCountsNow[name]) return [];
+  const list = setsNow.get(name); if (!list) { loadStarSets(name).then(again); return []; }
+  const out: { r: SetRec; k: number; line: SetRec["tl"][number] }[] = [];
+  list.forEach((r, k) => { const line = r.tl.find((x) => x[2] && yts.has(x[2])); if (line) out.push({ r, k, line }); });
+  return out;
+}
+const inSetsShelf = (hits: ReturnType<typeof setsWith>, title: string) => !hits.length ? "" :
+  `<div>${shelfHead(title, hits.length)}<div class="shelf">${hits.slice(0, SHELF).map(({ r, k, line }) => `<button class="shelf-i" data-set="${k}" data-at="${Math.max(0, line[0])}" title="${esc(r.t)}${line[0] >= 0 ? ` — from ${hms(line[0])}` : ""}"><span class="cover"><img alt="" loading="lazy" referrerpolicy="no-referrer" src="https://i.ytimg.com/vi/${esc(r.v)}/default.jpg"><b>${line[0] >= 0 ? `▶ ${hms(line[0])}` : hms(r.d)}</b></span><span class="nm">${esc(setHead(r.t))}</span><small>${esc(line[1])}</small></button>`).join("")}</div></div>`;
+
+let planetOpen = -1;
 function planet(pi: number, o: Sel) {
   const g = galaxy, p = g.planets[pi], s = g.stars[p.s], ch = chunk(p.s), ty = g.ptype[pi];
-  if (!ch) tracks.load(p.s).then(() => { if (state.sel === o) renderDossier(); });
-  const n = p.t1 - p.t0, shown = Math.min(n, 150), sys = g.planetsByStar[p.s], rank = sys.indexOf(pi) + 1;
+  const again = () => { if (state.sel === o) renderDossier(); };
+  if (!ch) tracks.load(p.s).then(again);
+  if (planetOpen !== pi) planetOpen = -1;
+  const n = p.t1 - p.t0, sys = g.planetsByStar[p.s], rank = sys.indexOf(pi) + 1;
   let activity = "", ly: [number, number] | null = null;
   if (ch && n) {
     const ys = ch.yr.slice(p.t0, p.t1).filter(Boolean);
     if (ys.length >= 3 && !g.meta.sample) ly = [Math.min(...ys), Math.max(...ys)];
     if (ys.length) { const y0 = Math.min(...ys), cnt = new Array(Math.max(...ys) - y0 + 1).fill(0); ys.forEach((y) => cnt[y - y0]++); activity = hist(cnt, y0, "ACTIVITY PER YEAR"); }
   }
+  const order = ch ? satelliteOrder(pi) : [];
+  const hits = ch ? setsWith(p.s, new Set(order.map((i) => ch.yt[i])), again) : [];
+  // the labels round it: the next ones out from this one in the star's list
+  const others = sys.filter((q) => q !== pi).sort((a, b) => Math.abs(sys.indexOf(a) - rank) - Math.abs(sys.indexOf(b) - rank)).slice(0, SHELF);
   const sd = hash(p.name) % 100;
   let drawn = false, last = -1;
   dosAnim = (t) => {
@@ -157,23 +182,32 @@ function planet(pi: number, o: Sel) {
     const r = Math.min(f.h, f.w) * 0.4; // every planet at one size; rings may run off the frame
     drawPlanetBody(f.g, pi, f.w / 2, f.h / 2, r, reduce ? 0.4 : t / 4000 + sd, 1); drawn = true;
   };
+  const tracksPart = !ch ? `<div>${shelfHead("TRACKS", n + (p.v?.[1] ?? 0))}<p class="note">LOADING…</p></div>`
+    : planetOpen === pi
+      ? `<div><div class="ph-sub shelf-h"><span>TRACKS · SHUFFLED</span><span><button type="button" class="out" data-shuffle="${pi}" title="Another random order">↻ SHUFFLE</button> <button type="button" class="out" data-back="1">← BACK</button></span></div><div class="list">${order.slice(0, 150).map((i, k) => trackItem(p.s, i, k + 1)).join("")}</div>
+        ${n > 150 ? `<div class="more">150 of ${fmt(n)} at random: ↻ for others, or zoom in on the planet to see them all.</div>` : ""}${p.v ? `<div class="more">+ ${fmt(p.v[1])} more in the vault, off the map: SOLARIS STATION plays them too.</div>` : ""}</div>`
+      : `<div><div class="ph-sub shelf-h"><span>TRACKS</span><span><button type="button" class="out" data-shuffle="${pi}" title="Others at random">↻</button> <button type="button" class="out" data-all="tracks">ALL ${fmt(n + (p.v?.[1] ?? 0))} →</button></span></div><div class="shelf">${order.slice(0, SHELF).map((i) => trackCover(p.s, i)).join("")}</div></div>`;
   return {
     code: `PLANET // PL-${pad(pi, 4)}`, title: p.name.toUpperCase(),
     html: `<div class="hero"><div class="frame" id="hero"><canvas></canvas></div>
-        <div class="ident"><span class="code">PL-${pad(pi, 4)} // LABEL</span><h2 id="dosTitle"></h2><span class="stamp">${p.yr[0] || "????"}–${p.yr[1] || "????"}</span></div></div>
-      <div class="rows"><div class="row"><span>ORBIT</span><button class="link" data-r="${R({ kind: "star", s: p.s })}">${esc(s.name.toUpperCase())}</button></div>${row("TYPE", `<span title="${esc(planetType(pi))}">${PTYPE_INFO[ty][0] + (ty === "giant" && g.ringed[pi] ? " · RINGED" : "")}</span>`)}${row("SIZE RANK", `#${rank} OF ${fmt(sys.length)}`)}${row("POSITION", `${ordinal(g.orbitNo[pi]).toUpperCase()} FROM THE STAR`)}${row("RELEASES", fmt(p.n))}${row("TRACKS", p.v ? `${fmt(n + p.v[1])} · ${fmt(n)} ON THE MAP` : fmt(n))}${row("ACTIVE", p.ay ? `${p.ay} OF ${spanOf(p) + 1} YEARS` : `${spanOf(p) + (p.yr[0] ? 1 : 0)} YEARS`)}</div>
-      ${activity}
+        <div class="ident"><span class="code">PL-${pad(pi, 4)} // <button class="link" data-r="${R({ kind: "star", s: p.s })}">${esc(s.name.toUpperCase())}</button></span><h2 id="dosTitle"></h2><span class="stamp">${p.yr[0] || "????"}–${p.yr[1] || "????"} · ${fmt(p.n)} REL</span></div></div>
+      ${tracksPart}
+      ${inSetsShelf(hits, "IN DJ SETS")}
+      ${others.length ? `<div>${shelfHead(`MORE IN ${s.name.toUpperCase()}`, sys.length - 1)}<div class="shelf">${others.map((q) => `<button class="shelf-i pl" data-r="${R({ kind: "planet", p: q })}"><canvas data-pl="${q}"></canvas><span class="nm">${esc(g.planets[q].name)}</span><small>${fmt(g.planets[q].n)} REL</small></button>`).join("")}</div></div>` : ""}
+      <details class="about star-about"><summary>ABOUT THE LABEL</summary>
+        <div class="rows"><div class="row"><span>ORBIT</span><button class="link" data-r="${R({ kind: "star", s: p.s })}">${esc(s.name.toUpperCase())}</button></div>${row("TYPE", `<span title="${esc(planetType(pi))}">${PTYPE_INFO[ty][0] + (ty === "giant" && g.ringed[pi] ? " · RINGED" : "")}</span>`)}${row("SIZE RANK", `#${rank} OF ${fmt(sys.length)}`)}${row("POSITION", `${ordinal(g.orbitNo[pi]).toUpperCase()} FROM THE STAR`)}${row("RELEASES", fmt(p.n))}${row("TRACKS", p.v ? `${fmt(n + p.v[1])} · ${fmt(n)} ON THE MAP` : fmt(n))}${row("ACTIVE", p.ay ? `${p.ay} OF ${spanOf(p) + 1} YEARS` : `${spanOf(p) + (p.yr[0] ? 1 : 0)} YEARS`)}</div>
+        ${activity}</details>
       ${ch && n && !g.meta.sample ? `<button class="play" data-orbit="${pi}">▶ SOLARIS STATION<small class="sub">this label as an endless radio</small></button>` : ""}
-      ${ly ? `<button class="plot crt" data-years="${pi}"><span>⟶ TIME WARP · ${ly[0]}–${ly[1]}</span><small class="sub">the label’s story, a track a year</small></button>` : ""}
-      <div><div class="ph-sub sat-head"><span>SATELLITES · SHUFFLED</span><button type="button" class="out" data-shuffle="${pi}" title="Another random order">↻ SHUFFLE</button></div><div class="list">${ch ? satelliteOrder(pi).slice(0, shown).map((i, k) => trackItem(p.s, i, k + 1)).join("") : `<p class="note">LOADING…</p>`}</div>
-      ${n > shown ? `<div class="more">${fmt(shown)} of ${fmt(n)} at random: ↻ for others, or zoom in on the planet to see them all.</div>` : ""}
-      ${p.v ? `<div class="more">+ ${fmt(p.v[1])} more in the vault, off the map: SOLARIS STATION plays them too.</div>` : ""}</div>`,
+      ${ly ? `<button class="plot crt" data-years="${pi}"><span>⟶ TIME WARP · ${ly[0]}–${ly[1]}</span><small class="sub">the label’s story, a track a year</small></button>` : ""}`,
   };
 }
 
 function track(o: { kind: "track"; s: number; i: number }) {
   const g = galaxy, ch = chunk(o.s)!, s = g.stars[o.s], pi = ch.p[o.i], p = pi >= 0 ? g.planets[pi] : null, yt = ch.yt[o.i];
-  const near = nearestTracks(o, 8), on = beacons.has(o);
+  const near = nearestTracks(o, SHELF), on = beacons.has(o);
+  const again = () => { if (state.sel === o) renderDossier(); };
+  const hits = setsWith(o.s, new Set([yt]), again);
+  const mates = p ? satelliteOrder(pi).filter((i) => i !== o.i).slice(0, SHELF) : [];
   const sd = hash(yt) % 97;
   let done = false;
   dosAnim = (t) => {
@@ -189,17 +223,16 @@ function track(o: { kind: "track"; s: number; i: number }) {
   return {
     code: `OBJECT // ${trackCode(o.s, o.i)}`, title: ch.t[o.i].toUpperCase(),
     html: `<div class="hero"><div class="frame thumb" id="hero"><img alt="" src="https://i.ytimg.com/vi/${esc(yt)}/default.jpg" referrerpolicy="no-referrer"><span class="raster"></span></div>
-        <div class="ident"><span class="code">${trackCode(o.s, o.i)} // TRACK</span><h2 id="dosTitle"></h2><span class="by">${esc(ch.an[ch.a[o.i]])}</span></div></div>
-      <div class="rows">${row("ARTIST", esc(ch.an[ch.a[o.i]]))}${row("YEAR", ch.yr[o.i] ? String(ch.yr[o.i]) : "----")}
-        <div class="row"><span>LABEL</span>${p ? `<button class="link" data-r="${R({ kind: "planet", p: pi })}">${esc(p.name.toUpperCase())}</button>` : `<span>ASTEROID BELT${ore.has(yt) ? " · ORE MINED" : ""}</span>`}</div>
-        <div class="row"><span>STYLE</span><button class="link" data-r="${R({ kind: "star", s: o.s })}">${esc(s.name.toUpperCase())}</button></div>
-        ${row("COORDINATES", `${ch.x[o.i].toFixed(0)} / ${ch.y[o.i].toFixed(0)}`)}</div>
+        <div class="ident"><span class="code">${trackCode(o.s, o.i)} // TRACK</span><h2 id="dosTitle"></h2><span class="by">${esc(ch.an[ch.a[o.i]])}${ch.yr[o.i] ? ` · ${ch.yr[o.i]}` : ""}</span></div></div>
+      <div class="chips trail">${p ? `<button data-r="${R({ kind: "planet", p: pi })}" style="--c:${s.color}">◍ ${esc(p.name)}</button>` : `<span class="chip-s">ASTEROID BELT${ore.has(yt) ? " · ORE MINED" : ""}</span>`}<button data-r="${R({ kind: "star", s: o.s })}" style="--c:${s.color}">✶ ${esc(s.name)}</button></div>
       <div class="scope-c"><canvas id="wave"></canvas></div>
+      ${inSetsShelf(hits, "PLAYED IN DJ SETS")}
+      ${mates.length ? `<div>${shelfHead(`MORE ON ${p!.name.toUpperCase()}`, p!.t1 - p!.t0 - 1)}<div class="shelf">${mates.map((i) => trackCover(o.s, i)).join("")}</div></div>` : ""}
+      ${near.length ? `<div>${shelfHead("NEAREST SIGNALS", near.length)}<div class="shelf">${near.map((r) => trackCover(r.s, r.i)).join("")}</div></div>` : ""}
       ${g.meta.sample ? `<p class="note">TEST SIGNAL: videos won't play.</p>` : `<button class="play" data-r="${R(o)}" data-play="1">${isNowPlaying(o.s, o.i) ? "◉ ON AIR" : "▶ PLAY"}</button>`}
       <button class="plot like${on ? " on" : ""}" data-like="1">${beaconLabel(on)}</button>
       <button class="plot like lists" data-lists="1" aria-haspopup="true" title="Put this track in one of your lists (⇧L)">${ICON.list}<span>ADD TO LIST</span></button>
-      <div class="outs"><button type="button" class="out" data-share="copy" title="Copy a link to this track">COPY LINK ⧉</button><button type="button" class="out" data-share="send" title="Post this track to COMMS, as a card">SEND TO COMMS ⇪</button><a class="out" href="https://www.youtube.com/watch?v=${esc(yt)}" target="_blank" rel="noopener">OPEN ON YOUTUBE ↗</a></div>
-      ${near.length ? `<div><div class="ph-sub">NEAREST SIGNALS</div><div class="list">${near.map((r, k) => trackItem(r.s, r.i, k + 1)).join("")}</div></div>` : ""}`,
+      <div class="outs"><button type="button" class="out" data-share="copy" title="Copy a link to this track">COPY LINK ⧉</button><button type="button" class="out" data-share="send" title="Post this track to COMMS, as a card">SEND TO COMMS ⇪</button><a class="out" href="https://www.youtube.com/watch?v=${esc(yt)}" target="_blank" rel="noopener">OPEN ON YOUTUBE ↗</a></div>`,
   };
 }
 
@@ -254,8 +287,9 @@ export function initDossier() {
     const po = t.closest<HTMLElement>("[data-orbit]"); if (po) { playOrbit(+po.dataset.orbit!); return; }
     const sf = t.closest<HTMLElement>("[data-shuffle]"); if (sf) { reshuffle(+sf.dataset.shuffle!); renderDossier(); return; }
     const al = t.closest<HTMLElement>("[data-all]");
+    if (al && al.dataset.all === "tracks" && state.sel?.kind === "planet") { planetOpen = state.sel.p; renderDossier(); return; }
     if (al && state.sel?.kind === "star") { opened = { si: state.sel.s, what: al.dataset.all as "sets" | "labels" }; renderDossier(); return; }
-    if (t.closest("[data-back]")) { opened = null; renderDossier(); return; }
+    if (t.closest("[data-back]")) { opened = null; planetOpen = -1; renderDossier(); return; }
     const ms = t.closest<HTMLElement>("[data-more-sets]");
     if (ms) {
       const si = +ms.dataset.moreSets!, d = $("detail"), top = d.scrollTop;
@@ -268,7 +302,10 @@ export function initDossier() {
       return;
     }
     const st = t.closest<HTMLElement>("[data-set]");
-    if (st && state.sel?.kind === "star") { const nm = galaxy.stars[state.sel.s].name, r = setsNow.get(nm)?.[+st.dataset.set!]; if (r) playSet(r, nm); return; }
+    if (st && state.sel) {
+      const sel = state.sel, si = sel.kind === "planet" ? galaxy.planets[sel.p].s : sel.s, nm = galaxy.stars[si].name, r = setsNow.get(nm)?.[+st.dataset.set!];
+      if (r) playSet(r, nm, +(st.dataset.at ?? 0)); return;
+    }
     const dg = t.closest<HTMLElement>("[data-dig]"); if (dg) { digBelt(+dg.dataset.dig!); return; }
     const ls = t.closest<HTMLElement>("[data-lists]"); if (ls) { if (state.sel?.kind === "track") listPickerFor(ls, state.sel); return; }
     if (t.closest("[data-like]")) { if (state.sel?.kind === "track") toggleBeacon(state.sel); return; }

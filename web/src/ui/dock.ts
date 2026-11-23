@@ -130,9 +130,9 @@ function mediaKeys(title: string, artist: string, yt: string) {
 }
 
 /** plays a single video through the transport (test hook #test-<id>) */
-export function playTestSignal(id: string) {
+export function playTestSignal(id: string, start = 0) {
   clearSet(); showDock(); $("npTitle").textContent = "TEST SIGNAL"; $("npArtist").textContent = id;
-  player.play(id);
+  player.play(id, start);
 }
 
 export function initDock() {

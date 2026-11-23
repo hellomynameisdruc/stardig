@@ -20,11 +20,11 @@ const starIdx = (name: string) => galaxy.stars.findIndex((s) => s.name === name)
 /** tracks of the set found on the map */
 export const onMap = (r: SetRec) => r.tl.filter((x) => x[2]).length;
 
-/** put a set on air, in SET MODE */
-export function playSet(rec: SetRec, star: string) {
+/** put a set on air, in SET MODE (from `start` seconds in) */
+export function playSet(rec: SetRec, star: string, start = 0) {
   const si = starIdx(star);
   if (si >= 0 && !starOpen(si)) { ui.locked(si); return; } // closed beta: sets keep to the open galaxy too
-  playTestSignal(rec.v);
+  playTestSignal(rec.v, start);
   state.set = { rec, star }; state.nowPlaying = null; state.orbit = null; state.dirty = true;
   $("npTitle").textContent = rec.t; $("npArtist").textContent = rec.live ? `● LIVE · ${rec.c}` : `SET · ${rec.c} · ${rec.y}`;
   if (si >= 0) for (const id of ["playerBox", "dockPill"]) $(id).style.setProperty("--acc", galaxy.stars[si].color);
